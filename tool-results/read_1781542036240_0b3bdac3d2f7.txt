@@ -1,0 +1,812 @@
+     1→<!DOCTYPE html>
+     2→<html lang="fr">
+     3→<head>
+     4→  <meta charset="UTF-8" />
+     5→  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+     6→  <title>WS — Intelligence Artificielle Française</title>
+     7→  <style>
+     8→    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+     9→
+    10→    * { margin: 0; padding: 0; box-sizing: border-box; }
+    11→
+    12→    :root {
+    13→      --bg-dark: #050510;
+    14→      --bg-card: #0e0e1c;
+    15→      --bg-input: #1e1e32;
+    16→      --bg-sidebar: #0d0d1a;
+    17→      --border: rgba(255,255,255,0.08);
+    18→      --border-light: rgba(255,255,255,0.10);
+    19→      --text-primary: rgba(255,255,255,0.90);
+    20→      --text-secondary: rgba(255,255,255,0.60);
+    21→      --text-muted: rgba(255,255,255,0.30);
+    22→      --emerald: #10b981;
+    23→      --violet: #8b5cf6;
+    24→      --amber: #f59e0b;
+    25→      --blue-fr: #002395;
+    26→      --red-fr: #ED2939;
+    27→    }
+    28→
+    29→    body {
+    30→      font-family: 'Inter', -apple-system, sans-serif;
+    31→      background: var(--bg-dark);
+    32→      color: white;
+    33→      overflow: hidden;
+    34→      height: 100vh;
+    35→    }
+    36→
+    37→    /* ===== BACKGROUND ===== */
+    38→    .bg-container {
+    39→      position: fixed; inset: 0;
+    40→      pointer-events: none; overflow: hidden; z-index: 0;
+    41→    }
+    42→    .bg-image {
+    43→      position: absolute; inset: 0;
+    44→      background: url('https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=1920&q=80') center/cover no-repeat;
+    45→      opacity: 0.7;
+    46→      animation: kenburns 60s ease-in-out infinite alternate;
+    47→    }
+    48→    .bg-tricolor {
+    49→      position: absolute; inset: 0; display: flex;
+    50→    }
+    51→    .bg-tricolor > div { width: 33.333%; height: 100%; }
+    52→    .bg-tricolor .blue { background: rgba(0,35,149,0.08); }
+    53→    .bg-tricolor .white { background: rgba(255,255,255,0.01); }
+    54→    .bg-tricolor .red { background: rgba(237,41,57,0.07); }
+    55→    .bg-gradient {
+    56→      position: absolute; inset: 0;
+    57→      background: linear-gradient(to bottom right, rgba(0,35,149,0.05), transparent, rgba(237,41,57,0.05));
+    58→    }
+    59→    .bg-vignette {
+    60→      position: absolute; inset: 0;
+    61→      background: radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.45) 100%);
+    62→    }
+    63→
+    64→    @keyframes kenburns {
+    65→      0% { transform: scale(1.0) translate(0,0); }
+    66→      50% { transform: scale(1.08) translate(-1%,1%); }
+    67→      100% { transform: scale(1.03) translate(1%,-0.5%); }
+    68→    }
+    69→
+    70→    /* ===== LAYOUT ===== */
+    71→    .app {
+    72→      display: flex; height: 100vh; position: relative; z-index: 1;
+    73→    }
+    74→
+    75→    /* ===== SIDEBAR ===== */
+    76→    .sidebar {
+    77→      width: 260px; height: 100vh; display: flex; flex-direction: column;
+    78→      background: rgba(13,13,26,0.95); backdrop-filter: blur(20px);
+    79→      border-right: 1px solid var(--border); flex-shrink: 0;
+    80→      transition: transform 0.3s ease;
+    81→    }
+    82→    .sidebar-header {
+    83→      display: flex; align-items: center; gap: 12px;
+    84→      padding: 16px; border-bottom: 1px solid var(--border);
+    85→    }
+    86→    .ws-logo-small {
+    87→      width: 36px; height: 36px; border-radius: 12px;
+    88→      background: linear-gradient(135deg, var(--blue-fr), rgba(255,255,255,0.9), var(--red-fr));
+    89→      display: flex; align-items: center; justify-content: center;
+    90→      box-shadow: 0 4px 12px rgba(0,35,149,0.2);
+    91→    }
+    92→    .ws-logo-small span { color: black; font-weight: 800; font-size: 13px; }
+    93→    .sidebar-header h2 { font-size: 16px; font-weight: 600; color: white; }
+    94→
+    95→    .new-conv-btn {
+    96→      display: flex; align-items: center; gap: 10px;
+    97→      margin: 12px; padding: 10px 14px; border-radius: 12px;
+    98→      background: rgba(26,26,46,0.8); border: 1px solid var(--border);
+    99→      color: var(--text-secondary); font-size: 14px; cursor: pointer;
+   100→      transition: all 0.2s;
+   101→    }
+   102→    .new-conv-btn:hover {
+   103→      background: rgba(34,34,58,0.95); color: white;
+   104→      border-color: rgba(16,185,129,0.2);
+   105→    }
+   106→    .new-conv-btn svg { color: rgba(16,185,129,0.7); }
+   107→
+   108→    .conversations {
+   109→      flex: 1; overflow-y: auto; padding: 0 12px;
+   110→    }
+   111→    .conversations-label {
+   112→      font-size: 11px; font-weight: 500; text-transform: uppercase;
+   113→      letter-spacing: 0.1em; color: var(--text-muted); padding: 8px 4px;
+   114→    }
+   115→    .conv-item {
+   116→      display: flex; align-items: center; gap: 8px;
+   117→      padding: 8px 12px; border-radius: 12px; cursor: pointer;
+   118→      color: var(--text-secondary); font-size: 14px;
+   119→      transition: all 0.15s; position: relative;
+   120→    }
+   121→    .conv-item:hover { background: rgba(26,26,46,0.7); color: var(--text-primary); }
+   122→    .conv-item.active {
+   123→      background: rgba(16,185,129,0.15); color: var(--text-primary);
+   124→      border: 1px solid rgba(16,185,129,0.15);
+   125→    }
+   126→    .conv-item svg { flex-shrink: 0; opacity: 0.3; }
+   127→    .conv-item.active svg { color: rgba(16,185,129,0.7); opacity: 1; }
+   128→    .conv-item .title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+   129→    .conv-item .delete-btn {
+   130→      opacity: 0; background: none; border: none; color: rgba(255,255,255,0.2);
+   131→      cursor: pointer; padding: 2px; transition: all 0.15s;
+   132→    }
+   133→    .conv-item:hover .delete-btn { opacity: 1; }
+   134→    .conv-item .delete-btn:hover { color: #ef4444; }
+   135→
+   136→    .sidebar-footer {
+   137→      padding: 12px; border-top: 1px solid var(--border);
+   138→    }
+   139→    .user-info {
+   140→      display: flex; align-items: center; gap: 12px; padding: 8px;
+   141→    }
+   142→    .user-avatar {
+   143→      width: 32px; height: 32px; border-radius: 50%;
+   144→      background: linear-gradient(135deg, var(--blue-fr), var(--red-fr));
+   145→      display: flex; align-items: center; justify-content: center;
+   146→      font-weight: 700; font-size: 12px; color: white;
+   147→      box-shadow: 0 4px 12px rgba(0,35,149,0.2);
+   148→    }
+   149→    .user-name { font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.8); }
+   150→    .user-plan { font-size: 12px; color: var(--text-muted); }
+   151→
+   152→    /* ===== MAIN ===== */
+   153→    .main {
+   154→      flex: 1; display: flex; flex-direction: column; min-height: 100vh; position: relative;
+   155→    }
+   156→
+   157→    .top-bar {
+   158→      display: flex; align-items: center; justify-content: space-between;
+   159→      padding: 12px 24px; z-index: 10;
+   160→    }
+   161→    .menu-btn {
+   162→      display: none; background: none; border: none; color: rgba(255,255,255,0.5);
+   163→      cursor: pointer; padding: 4px;
+   164→    }
+   165→    .top-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+   166→    .top-btn {
+   167→      display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+   168→      border-radius: 9999px; background: rgba(26,26,46,0.8);
+   169→      border: 1px solid var(--border); color: var(--text-secondary);
+   170→      font-size: 13px; cursor: pointer; transition: all 0.2s;
+   171→    }
+   172→    .top-btn:hover { background: rgba(34,34,58,0.9); color: white; }
+   173→    .top-btn-icon {
+   174→      width: 32px; height: 32px; border-radius: 50%; padding: 0;
+   175→      display: flex; align-items: center; justify-content: center;
+   176→    }
+   177→
+   178→    /* ===== HOME VIEW ===== */
+   179→    .home-view {
+   180→      flex: 1; display: flex; flex-direction: column;
+   181→      align-items: center; justify-content: center;
+   182→      padding: 16px; margin-top: -64px; z-index: 10;
+   183→    }
+   184→    .ws-title {
+   185→      font-size: clamp(5rem, 12vw, 10rem); font-weight: 800;
+   186→      letter-spacing: -0.04em; line-height: 1;
+   187→      background: linear-gradient(to bottom, white, rgba(255,255,255,0.9), rgba(255,255,255,0.5));
+   188→      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+   189→      background-clip: text; margin-bottom: 24px;
+   190→      animation: fadeIn 0.8s ease;
+   191→    }
+   192→    .ws-tagline {
+   193→      color: var(--text-muted); font-size: 18px; margin-bottom: 40px;
+   194→      display: flex; align-items: center; gap: 8px;
+   195→      animation: fadeIn 0.6s ease 0.2s both;
+   196→    }
+   197→    .ws-tagline svg { color: rgba(245,158,11,0.6); }
+   198→
+   199→    .search-bar {
+   200→      width: 100%; max-width: 640px; display: flex; align-items: center;
+   201→      background: rgba(18,18,42,0.95); backdrop-filter: blur(20px);
+   202→      border-radius: 16px; padding: 16px 20px;
+   203→      border: 1px solid var(--border-light);
+   204→      transition: all 0.3s; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+   205→      animation: fadeIn 0.6s ease 0.3s both;
+   206→    }
+   207→    .search-bar:focus-within {
+   208→      border-color: rgba(0,35,149,0.4);
+   209→      background: rgba(22,22,48,0.95);
+   210→    }
+   211→    .search-bar input {
+   212→      flex: 1; background: none; border: none; outline: none;
+   213→      color: white; font-size: 16px; font-family: inherit;
+   214→    }
+   215→    .search-bar input::placeholder { color: rgba(255,255,255,0.25); }
+   216→    .search-bar .icon-btn {
+   217→      width: 32px; height: 32px; border-radius: 10px;
+   218→      background: rgba(26,26,46,0.8); border: none;
+   219→      display: flex; align-items: center; justify-content: center;
+   220→      cursor: pointer; transition: all 0.2s; color: rgba(255,255,255,0.4);
+   221→    }
+   222→    .search-bar .icon-btn:hover { background: rgba(34,34,58,0.9); }
+   223→    .search-bar .send-btn {
+   224→      background: rgba(0,35,149,0.8); color: white; border: none;
+   225→    }
+   226→    .search-bar .send-btn:hover { background: var(--blue-fr); }
+   227→    .search-bar .sparkle { color: rgba(255,255,255,0.2); margin-right: 12px; flex-shrink: 0; }
+   228→
+   229→    .action-buttons {
+   230→      display: flex; flex-wrap: wrap; align-items: center;
+   231→      justify-content: center; gap: 12px; margin-top: 24px;
+   232→      animation: fadeIn 0.6s ease 0.5s both;
+   233→    }
+   234→    .action-btn {
+   235→      display: flex; align-items: center; gap: 10px;
+   236→      padding: 12px 20px; border-radius: 16px;
+   237→      border: 1px solid var(--border); cursor: pointer;
+   238→      font-size: 14px; font-weight: 500; font-family: inherit;
+   239→      color: rgba(255,255,255,0.7); transition: all 0.3s;
+   240→    }
+   241→    .action-btn:hover { color: white; transform: translateY(-2px); }
+   242→    .action-btn.violet { background: linear-gradient(to right, rgba(139,92,246,0.2), rgba(192,38,211,0.2)); }
+   243→    .action-btn.violet:hover { border-color: rgba(139,92,246,0.4); }
+   244→    .action-btn.violet svg { color: #a78bfa; }
+   245→    .action-btn.emerald { background: linear-gradient(to right, rgba(16,185,129,0.2), rgba(20,184,166,0.2)); }
+   246→    .action-btn.emerald:hover { border-color: rgba(16,185,129,0.4); }
+   247→    .action-btn.emerald svg { color: #34d399; }
+   248→    .action-btn.amber { background: linear-gradient(to right, rgba(245,158,11,0.2), rgba(249,115,22,0.2)); }
+   249→    .action-btn.amber:hover { border-color: rgba(245,158,11,0.4); }
+   250→    .action-btn.amber svg { color: #fbbf24; }
+   251→
+   252→    /* ===== CHAT PANEL ===== */
+   253→    .chat-panel {
+   254→      flex: 1; display: flex; flex-direction: column;
+   255→      max-width: 896px; width: 100%; margin: 0 auto;
+   256→      padding: 16px 32px; z-index: 10;
+   257→      background: rgba(14,14,28,0.95); backdrop-filter: blur(20px);
+   258→      border-radius: 16px; border: 1px solid var(--border);
+   259→      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+   260→      animation: slideUp 0.4s ease;
+   261→    }
+   262→    .chat-header {
+   263→      display: flex; align-items: center; justify-content: space-between;
+   264→      margin-bottom: 24px;
+   265→    }
+   266→    .chat-header-left { display: flex; align-items: center; gap: 12px; }
+   267→    .back-btn {
+   268→      width: 32px; height: 32px; border-radius: 10px;
+   269→      background: rgba(26,26,46,0.8); border: none;
+   270→      display: flex; align-items: center; justify-content: center;
+   271→      cursor: pointer; transition: all 0.2s; color: rgba(255,255,255,0.5);
+   272→    }
+   273→    .back-btn:hover { background: rgba(34,34,58,0.9); }
+   274→    .chat-header h2 { font-size: 18px; font-weight: 600; color: rgba(255,255,255,0.8); }
+   275→    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+   276→    .status-dot.emerald { background: #34d399; }
+   277→    .status-dot.violet { background: #a78bfa; }
+   278→    .status-dot.amber { background: #fbbf24; }
+   279→
+   280→    .messages {
+   281→      flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;
+   282→      padding-right: 8px; min-height: 0;
+   283→    }
+   284→    .messages::-webkit-scrollbar { width: 4px; }
+   285→    .messages::-webkit-scrollbar-track { background: transparent; }
+   286→    .messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+   287→
+   288→    .msg { display: flex; }
+   289→    .msg.user { justify-content: flex-end; }
+   290→    .msg.assistant { justify-content: flex-start; }
+   291→    .msg-wrapper { max-width: 85%; }
+   292→    .msg.assistant .msg-wrapper { display: flex; gap: 12px; }
+   293→    .ws-avatar {
+   294→      width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+   295→      background: linear-gradient(135deg, var(--blue-fr), rgba(255,255,255,0.9), var(--red-fr));
+   296→      display: flex; align-items: center; justify-content: center;
+   297→      box-shadow: 0 4px 12px rgba(0,35,149,0.2);
+   298→    }
+   299→    .ws-avatar span { color: black; font-weight: 800; font-size: 9px; }
+   300→    .msg-bubble {
+   301→      border-radius: 16px; padding: 12px 16px;
+   302→      font-size: 14px; line-height: 1.6;
+   303→    }
+   304→    .msg.user .msg-bubble {
+   305→      background: rgba(16,185,129,0.4); border: 1px solid rgba(16,185,129,0.2);
+   306→      color: rgba(255,255,255,0.95);
+   307→    }
+   308→    .msg.assistant .msg-bubble {
+   309→      background: var(--bg-input); border: 1px solid var(--border-light);
+   310→      color: var(--text-primary);
+   311→    }
+   312→    .msg-bubble pre { white-space: pre-wrap; }
+   313→
+   314→    .typing-dots {
+   315→      display: flex; align-items: center; gap: 6px; padding: 4px 0;
+   316→    }
+   317→    .typing-dots span {
+   318→      width: 8px; height: 8px; border-radius: 50%;
+   319→      background: rgba(52,211,153,0.5); animation: bounce 1.4s infinite;
+   320→    }
+   321→    .typing-dots span:nth-child(2) { animation-delay: 150ms; }
+   322→    .typing-dots span:nth-child(3) { animation-delay: 300ms; }
+   323→
+   324→    .chat-input-area {
+   325→      display: flex; gap: 12px; padding-top: 8px; margin-top: 8px;
+   326→    }
+   327→    .chat-input-area input {
+   328→      flex: 1; background: var(--bg-input); border: 1px solid var(--border-light);
+   329→      border-radius: 12px; padding: 12px 16px; color: white;
+   330→      font-size: 14px; font-family: inherit; outline: none;
+   331→      transition: border-color 0.2s;
+   332→    }
+   333→    .chat-input-area input::placeholder { color: rgba(255,255,255,0.4); }
+   334→    .chat-input-area input:focus { border-color: rgba(16,185,129,0.4); }
+   335→    .chat-send-btn {
+   336→      padding: 12px 16px; border-radius: 12px;
+   337→      background: rgba(16,185,129,0.8); border: none; color: white;
+   338→      cursor: pointer; transition: all 0.2s; display: flex;
+   339→      align-items: center; justify-content: center;
+   340→    }
+   341→    .chat-send-btn:hover { background: var(--emerald); }
+   342→    .chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+   343→
+   344→    /* ===== FOOTER ===== */
+   345→    .footer {
+   346→      margin-top: auto; padding: 16px; text-align: center; z-index: 10;
+   347→    }
+   348→    .footer p { color: rgba(255,255,255,0.15); font-size: 12px; }
+   349→
+   350→    /* ===== EMPTY STATE ===== */
+   351→    .empty-state {
+   352→      flex: 1; display: flex; align-items: center; justify-content: center;
+   353→      min-height: 200px;
+   354→    }
+   355→    .empty-state-inner { text-align: center; }
+   356→    .empty-icon {
+   357→      width: 80px; height: 80px; border-radius: 16px;
+   358→      border: 1px solid rgba(16,185,129,0.1);
+   359→      background: rgba(16,185,129,0.1);
+   360→      display: flex; align-items: center; justify-content: center;
+   361→      margin: 0 auto 16px;
+   362→    }
+   363→    .empty-icon svg { color: rgba(52,211,153,0.5); }
+   364→    .empty-state p { color: var(--text-muted); font-size: 14px; }
+   365→
+   366→    /* ===== ANIMATIONS ===== */
+   367→    @keyframes fadeIn {
+   368→      from { opacity: 0; } to { opacity: 1; }
+   369→    }
+   370→    @keyframes slideUp {
+   371→      from { opacity: 0; transform: translateY(30px); }
+   372→      to { opacity: 1; transform: translateY(0); }
+   373→    }
+   374→    @keyframes bounce {
+   375→      0%, 80%, 100% { transform: scale(0); }
+   376→      40% { transform: scale(1); }
+   377→    }
+   378→
+   379→    /* ===== HIDDEN ===== */
+   380→    .hidden { display: none !important; }
+   381→
+   382→    /* ===== MOBILE ===== */
+   383→    @media (max-width: 768px) {
+   384→      .sidebar {
+   385→        position: fixed; z-index: 40; transform: translateX(-100%);
+   386→      }
+   387→      .sidebar.open { transform: translateX(0); }
+   388→      .menu-btn { display: block; }
+   389→      .chat-panel { margin: 8px; padding: 12px 16px; border-radius: 12px; }
+   390→    }
+   391→  </style>
+   392→</head>
+   393→<body>
+   394→  <div class="bg-container">
+   395→    <div class="bg-image"></div>
+   396→    <div class="bg-tricolor">
+   397→      <div class="blue"></div>
+   398→      <div class="white"></div>
+   399→      <div class="red"></div>
+   400→    </div>
+   401→    <div class="bg-gradient"></div>
+   402→    <div class="bg-vignette"></div>
+   403→  </div>
+   404→
+   405→  <div class="app">
+   406→    <!-- SIDEBAR -->
+   407→    <aside class="sidebar" id="sidebar">
+   408→      <div class="sidebar-header">
+   409→        <div class="ws-logo-small"><span>WS</span></div>
+   410→        <h2>WS</h2>
+   411→      </div>
+   412→      <button class="new-conv-btn" onclick="newConversation()">
+   413→        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+   414→        Nouvelle conversation
+   415→      </button>
+   416→      <div class="conversations" id="convList">
+   417→        <p class="conversations-label">Conversations</p>
+   418→      </div>
+   419→      <div class="sidebar-footer">
+   420→        <div class="user-info">
+   421→          <div class="user-avatar" id="userAvatar">?</div>
+   422→          <div>
+   423→            <p class="user-name" id="userName">Connexion...</p>
+   424→            <p class="user-plan" id="userEmail"></p>
+   425→          </div>
+   426→          <button onclick="handleLogout()" style="background:none;border:none;color:rgba(255,255,255,0.2);cursor:pointer;padding:2px;margin-left:auto;" title="Se déconnecter">
+   427→            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+   428→          </button>
+   429→        </div>
+   430→      </div>
+   431→    </aside>
+   432→
+   433→    <!-- MAIN -->
+   434→    <main class="main">
+   435→      <header class="top-bar">
+   436→        <button class="menu-btn" onclick="toggleSidebar()">
+   437→          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+   438→            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+   439→          </svg>
+   440→        </button>
+   441→        <div class="top-right">
+   442→          <button class="top-btn-icon top-btn">
+   443→            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+   444→          </button>
+   445→        </div>
+   446→      </header>
+   447→
+   448→      <!-- HOME VIEW -->
+   449→      <div id="homeView" class="home-view">
+   450→        <h1 class="ws-title">WS</h1>
+   451→        <p class="ws-tagline">
+   452→          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.912 5.813h6.147l-4.985 3.574 1.912 5.813L12 14.626l-4.986 3.574 1.912-5.813-4.985-3.574h6.147z"/></svg>
+   453→          Toujours prêt à répondre.
+   454→        </p>
+   455→        <div class="search-bar">
+   456→          <svg class="sparkle" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.912 5.813h6.147l-4.985 3.574 1.912 5.813L12 14.626l-4.986 3.574 1.912-5.813-4.985-3.574h6.147z"/></svg>
+   457→          <input type="text" id="mainInput" placeholder="Poser une question à WS..." onkeydown="if(event.key==='Enter')sendMainInput()" />
+   458→          <button class="send-btn icon-btn hidden" id="mainSendBtn" onclick="sendMainInput()">
+   459→            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+   460→          </button>
+   461→        </div>
+   462→        <div class="action-buttons">
+   463→          <button class="action-btn violet" onclick="openPanel('image')">
+   464→            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+   465→            Créer une image
+   466→          </button>
+   467→          <button class="action-btn emerald" onclick="openPanel('write')">
+   468→            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+   469→            Écrire ou modifier
+   470→          </button>
+   471→          <button class="action-btn amber" onclick="openPanel('search')">
+   472→            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+   473→            Faire une recherche
+   474→          </button>
+   475→        </div>
+   476→      </div>
+   477→
+   478→      <!-- CHAT PANEL -->
+   479→      <div id="chatPanel" class="chat-panel hidden">
+   480→        <div class="chat-header">
+   481→          <div class="chat-header-left">
+   482→            <button class="back-btn" onclick="goHome()">
+   483→              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+   484→            </button>
+   485→            <h2 id="panelTitle">Écrire ou modifier</h2>
+   486→            <div class="status-dot emerald" id="statusDot"></div>
+   487→          </div>
+   488→        </div>
+   489→        <div class="messages" id="messagesContainer"></div>
+   490→        <div class="chat-input-area">
+   491→          <input type="text" id="chatInput" placeholder="Écrivez votre message..." onkeydown="if(event.key==='Enter')sendMessage()" />
+   492→          <button class="chat-send-btn" id="chatSendBtn" onclick="sendMessage()">
+   493→            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+   494→          </button>
+   495→        </div>
+   496→      </div>
+   497→
+   498→      <footer class="footer">
+   499→        <p>WS peut faire des erreurs. Envisagez de vérifier les informations importantes.</p>
+   500→      </footer>
+   501→    </main>
+   502→  </div>
+   503→
+   504→  <script>
+   505→    // State
+   506→    let messages = [];
+   507→    let loading = false;
+   508→    let currentPanel = null;
+   509→    let userEmail = null;
+   510→
+   511→    // API — try local first, then deployed backend
+   512→    const API_URLS = [
+   513→      window.location.origin,           // same origin (if deployed with backend)
+   514→      'https://ws-ai.vercel.app',       // Vercel deployment (configure later)
+   515→    ];
+   516→
+   517→    const mainInput = document.getElementById('mainInput');
+   518→    const mainSendBtn = document.getElementById('mainSendBtn');
+   519→    const homeView = document.getElementById('homeView');
+   520→    const chatPanel = document.getElementById('chatPanel');
+   521→    const messagesContainer = document.getElementById('messagesContainer');
+   522→    const chatInput = document.getElementById('chatInput');
+   523→    const chatSendBtn = document.getElementById('chatSendBtn');
+   524→    const panelTitle = document.getElementById('panelTitle');
+   525→    const statusDot = document.getElementById('statusDot');
+   526→    const sidebar = document.getElementById('sidebar');
+   527→
+   528→    // Show send button on input
+   529→    mainInput.addEventListener('input', () => {
+   530→      mainSendBtn.classList.toggle('hidden', !mainInput.value.trim());
+   531→    });
+   532→
+   533→    function toggleSidebar() {
+   534→      sidebar.classList.toggle('open');
+   535→    }
+   536→
+   537→    function openPanel(type) {
+   538→      currentPanel = type;
+   539→      homeView.classList.add('hidden');
+   540→      chatPanel.classList.remove('hidden');
+   541→
+   542→      if (type === 'image') {
+   543→        panelTitle.textContent = 'Créer une image';
+   544→        statusDot.className = 'status-dot violet';
+   545→      } else if (type === 'write') {
+   546→        panelTitle.textContent = 'Écrire ou modifier';
+   547→        statusDot.className = 'status-dot emerald';
+   548→      } else {
+   549→        panelTitle.textContent = 'Recherche web';
+   550→        statusDot.className = 'status-dot amber';
+   551→      }
+   552→
+   553→      if (messages.length === 0) renderMessages();
+   554→      sidebar.classList.remove('open');
+   555→    }
+   556→
+   557→    function goHome() {
+   558→      currentPanel = null;
+   559→      messages = [];
+   560→      homeView.classList.remove('hidden');
+   561→      chatPanel.classList.add('hidden');
+   562→      renderMessages();
+   563→    }
+   564→
+   565→    function sendMainInput() {
+   566→      const text = mainInput.value.trim();
+   567→      if (!text) return;
+   568→      mainInput.value = '';
+   569→      mainSendBtn.classList.add('hidden');
+   570→      messages = [{ role: 'user', content: text }];
+   571→      openPanel('write');
+   572→      renderMessages();
+   573→      callWS(messages);
+   574→    }
+   575→
+   576→    function sendMessage() {
+   577→      const text = chatInput.value.trim();
+   578→      if (!text || loading) return;
+   579→      chatInput.value = '';
+   580→      messages.push({ role: 'user', content: text });
+   581→      renderMessages();
+   582→      callWS(messages);
+   583→    }
+   584→
+   585→    async function callWS(msgs) {
+   586→      loading = true;
+   587→      renderMessages();
+   588→
+   589→      const body = JSON.stringify({ messages: msgs });
+   590→
+   591→      // Try each API URL until one works
+   592→      for (const baseUrl of API_URLS) {
+   593→        try {
+   594→          const res = await fetch(baseUrl + '/api/chat', {
+   595→            method: 'POST',
+   596→            headers: { 'Content-Type': 'application/json' },
+   597→            body: body,
+   598→          });
+   599→          const data = await res.json();
+   600→          if (data.content) {
+   601→            messages.push({ role: 'assistant', content: data.content });
+   602→          } else if (data.error) {
+   603→            messages.push({ role: 'assistant', content: 'Erreur : ' + data.error });
+   604→          }
+   605→          loading = false;
+   606→          renderMessages();
+   607→          scrollToBottom();
+   608→          return; // success
+   609→        } catch {
+   610→          continue; // try next URL
+   611→        }
+   612→      }
+   613→
+   614→      // All APIs failed — show helpful message
+   615→      messages.push({ role: 'assistant', content: "Je suis actuellement hors ligne. Pour activer l'IA, le serveur backend doit être lancé.\n\n🔧 Pour lancer le serveur :\n1. Clonez le repo : git clone https://github.com/WSCompany-web/ws-ai.git\n2. Installez : bun install\n3. Lancez : bun run dev\n\nLe site fonctionnera alors sur localhost:3000" });
+   616→      loading = false;
+   617→      renderMessages();
+   618→      scrollToBottom();
+   619→    }
+   620→
+   621→    function renderMessages() {
+   622→      if (messages.length === 0 && !loading) {
+   623→        messagesContainer.innerHTML = `
+   624→          <div class="empty-state">
+   625→            <div class="empty-state-inner">
+   626→              <div class="empty-icon">
+   627→                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+   628→              </div>
+   629→              <p>Posez une question ou demandez à WS d'écrire quelque chose</p>
+   630→            </div>
+   631→          </div>`;
+   632→        return;
+   633→      }
+   634→
+   635→      let html = '';
+   636→      messages.forEach(msg => {
+   637→        if (msg.role === 'user') {
+   638→          html += `<div class="msg user"><div class="msg-wrapper"><div class="msg-bubble"><pre>${escapeHtml(msg.content)}</pre></div></div></div>`;
+   639→        } else {
+   640→          html += `<div class="msg assistant"><div class="msg-wrapper"><div class="ws-avatar"><span>WS</span></div><div class="msg-bubble"><pre>${escapeHtml(msg.content)}</pre></div></div></div>`;
+   641→        }
+   642→      });
+   643→
+   644→      if (loading) {
+   645→        html += `<div class="msg assistant"><div class="msg-wrapper"><div class="ws-avatar"><span>WS</span></div><div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div></div></div>`;
+   646→      }
+   647→
+   648→      messagesContainer.innerHTML = html;
+   649→      scrollToBottom();
+   650→    }
+   651→
+   652→    function scrollToBottom() {
+   653→      setTimeout(() => {
+   654→        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+   655→      }, 50);
+   656→    }
+   657→
+   658→    function escapeHtml(text) {
+   659→      const div = document.createElement('div');
+   660→      div.textContent = text;
+   661→      return div.innerHTML;
+   662→    }
+   663→
+   664→    // Conversations (localStorage for standalone version)
+   665→    function newConversation() {
+   666→      messages = [];
+   667→      openPanel('write');
+   668→      renderMessages();
+   669→    }
+   670→
+   671→    // Load any saved conversations from localStorage
+   672→    function loadConversations() {
+   673→      const convs = JSON.parse(localStorage.getItem('ws_conversations') || '[]');
+   674→      const list = document.getElementById('convList');
+   675→      let html = '<p class="conversations-label">Conversations</p>';
+   676→      if (convs.length === 0) {
+   677→        html += '<p style="color:rgba(255,255,255,0.2);font-size:12px;padding:8px 12px;">Aucune conversation</p>';
+   678→      }
+   679→      convs.forEach((c, i) => {
+   680→        html += `<div class="conv-item" onclick="loadConv(${i})">
+   681→          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+   682→          <span class="title">${escapeHtml(c.title)}</span>
+   683→          <button class="delete-btn" onclick="deleteConv(${i},event)">
+   684→            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+   685→          </button>
+   686→        </div>`;
+   687→      });
+   688→      list.innerHTML = html;
+   689→    }
+   690→
+   691→    function loadConv(index) {
+   692→      const convs = JSON.parse(localStorage.getItem('ws_conversations') || '[]');
+   693→      if (convs[index]) {
+   694→        messages = convs[index].messages || [];
+   695→        openPanel('write');
+   696→        renderMessages();
+   697→      }
+   698→    }
+   699→
+   700→    function deleteConv(index, e) {
+   701→      e.stopPropagation();
+   702→      const convs = JSON.parse(localStorage.getItem('ws_conversations') || '[]');
+   703→      convs.splice(index, 1);
+   704→      localStorage.setItem('ws_conversations', JSON.stringify(convs));
+   705→      loadConversations();
+   706→    }
+   707→
+   708→    // Save conversation after each message
+   709→    function saveConversation() {
+   710→      if (messages.length < 2) return;
+   711→      const convs = JSON.parse(localStorage.getItem('ws_conversations') || '[]');
+   712→      const title = messages[0]?.content?.slice(0, 50) || 'Nouvelle conversation';
+   713→      const existing = convs.findIndex(c => c.title === title);
+   714→      if (existing >= 0) {
+   715→        convs[existing].messages = [...messages];
+   716→      } else {
+   717→        convs.unshift({ title, messages: [...messages] });
+   718→      }
+   719→      localStorage.setItem('ws_conversations', JSON.stringify(convs));
+   720→      loadConversations();
+   721→    }
+   722→
+   723→    // Override callWS to also save
+   724→    const originalCallWS = callWS;
+   725→    callWS = async function(msgs) {
+   726→      await originalCallWS(msgs);
+   727→      saveConversation();
+   728→    };
+   729→
+   730→    // ===== AUTH SYSTEM =====
+   731→    const loginModal = document.getElementById('loginModal');
+   732→    const loginInputField = document.getElementById('loginEmailInput');
+   733→    const loginErrorEl = document.getElementById('loginError');
+   734→
+   735→    function checkAuth() {
+   736→      const email = localStorage.getItem('ws_user_email');
+   737→      if (email) {
+   738→        userEmail = email;
+   739→        updateUserUI();
+   740→        loginModal.classList.add('hidden');
+   741→      } else {
+   742→        loginModal.classList.remove('hidden');
+   743→        setTimeout(() => loginInputField.focus(), 300);
+   744→      }
+   745→    }
+   746→
+   747→    function handleLogin() {
+   748→      const email = loginInputField.value.trim().toLowerCase();
+   749→      if (!email || !email.includes('@') || !email.includes('.')) {
+   750→        loginErrorEl.textContent = 'Adresse email invalide';
+   751→        loginErrorEl.classList.remove('hidden');
+   752→        return;
+   753→      }
+   754→      localStorage.setItem('ws_user_email', email);
+   755→      userEmail = email;
+   756→      updateUserUI();
+   757→      loginModal.classList.add('hidden');
+   758→      loginInputField.value = '';
+   759→      loginErrorEl.classList.add('hidden');
+   760→    }
+   761→
+   762→    function handleLogout() {
+   763→      localStorage.removeItem('ws_user_email');
+   764→      userEmail = null;
+   765→      updateUserUI();
+   766→      loginModal.classList.remove('hidden');
+   767→      setTimeout(() => loginInputField.focus(), 300);
+   768→    }
+   769→
+   770→    function updateUserUI() {
+   771→      const avatar = document.getElementById('userAvatar');
+   772→      const name = document.getElementById('userName');
+   773→      const emailEl = document.getElementById('userEmail');
+   774→      if (userEmail) {
+   775→        avatar.textContent = userEmail.charAt(0).toUpperCase();
+   776→        name.textContent = userEmail.split('@')[0];
+   777→        emailEl.textContent = userEmail;
+   778→      } else {
+   779→        avatar.textContent = '?';
+   780→        name.textContent = 'Connexion...';
+   781→        emailEl.textContent = '';
+   782→      }
+   783→    }
+   784→
+   785→    // Init
+   786→    loadConversations();
+   787→    checkAuth();
+   788→  </script>
+   789→
+   790→  <!-- LOGIN MODAL -->
+   791→  <div id="loginModal" class="hidden" style="position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(12px);">
+   792→    <div style="width:100%;max-width:420px;margin:0 16px;background:rgba(14,14,28,0.98);backdrop-filter:blur(20px);border-radius:24px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 24px 64px rgba(0,0,0,0.6);padding:40px;animation:slideUp 0.3s ease;">
+   793→      <div style="display:flex;justify-content:center;margin-bottom:24px;">
+   794→        <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#002395,rgba(255,255,255,0.9),#ED2939);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,35,149,0.3);">
+   795→          <span style="color:black;font-weight:800;font-size:18px;">WS</span>
+   796→        </div>
+   797→      </div>
+   798→      <h2 style="font-size:24px;font-weight:700;text-align:center;color:white;margin-bottom:8px;">Bienvenue sur WS</h2>
+   799→      <p style="color:rgba(255,255,255,0.4);text-align:center;font-size:14px;margin-bottom:32px;">Connectez-vous avec votre adresse email pour commencer</p>
+   800→      <div style="position:relative;margin-bottom:16px;">
+   801→        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+   802→        <input type="email" id="loginEmailInput" placeholder="votre@email.com" onkeydown="if(event.key==='Enter')handleLogin()" style="width:100%;background:#1e1e32;border:1px solid rgba(255,255,255,0.10);border-radius:12px;padding:14px 16px 14px 44px;color:white;font-size:16px;font-family:inherit;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='rgba(0,35,149,0.4)'" onblur="this.style.borderColor='rgba(255,255,255,0.10)'" />
+   803→      </div>
+   804→      <p id="loginError" class="hidden" style="color:#f87171;font-size:14px;text-align:center;margin-bottom:12px;"></p>
+   805→      <button onclick="handleLogin()" style="width:100%;padding:14px;border-radius:12px;background:linear-gradient(to right,#002395,#ED2939);color:white;font-weight:600;font-size:16px;border:none;cursor:pointer;transition:all 0.2s;font-family:inherit;">Continuer</button>
+   806→      <p style="color:rgba(255,255,255,0.2);font-size:12px;text-align:center;margin-top:24px;">En continuant, vous acceptez les conditions d'utilisation de WS.</p>
+   807→    </div>
+   808→  </div>
+   809→
+   810→</body>
+   811→</html>
+   812→

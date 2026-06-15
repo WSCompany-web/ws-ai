@@ -1,0 +1,1008 @@
+     1→'use client'
+     2→
+     3→import { useState, useSyncExternalStore, useRef, useCallback, useEffect } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  ImageIcon,
+     7→  PenLine,
+     8→  Search,
+     9→  Send,
+    10→  X,
+    11→  Mic,
+    12→  Volume2,
+    13→  Sparkles,
+    14→  ArrowRight,
+    15→  Loader2,
+    16→  Plus,
+    17→  Settings,
+    18→  Star,
+    19→  MessageSquare,
+    20→  Trash2,
+    21→  Mail,
+    22→  LogOut,
+    23→} from 'lucide-react'
+    24→
+    25→function useMounted() {
+    26→  return useSyncExternalStore(
+    27→    () => () => {},
+    28→    () => true,
+    29→    () => false
+    30→  )
+    31→}
+    32→
+    33→type ActivePanel = null | 'image' | 'write' | 'search'
+    34→
+    35→interface ChatMessage {
+    36→  role: 'user' | 'assistant'
+    37→  content: string
+    38→}
+    39→
+    40→interface SearchResult {
+    41→  title: string
+    42→  url: string
+    43→  snippet: string
+    44→}
+    45→
+    46→interface Conversation {
+    47→  id: string
+    48→  title: string
+    49→  updatedAt: string
+    50→  messages: { role: string; content: string }[]
+    51→}
+    52→
+    53→export default function Home() {
+    54→  const mounted = useMounted()
+    55→  const [inputValue, setInputValue] = useState('')
+    56→  const [activePanel, setActivePanel] = useState<ActivePanel>(null)
+    57→  const [sidebarOpen, setSidebarOpen] = useState(false)
+    58→
+    59→  // Image generation state
+    60→  const [imagePrompt, setImagePrompt] = useState('')
+    61→  const [generatedImage, setGeneratedImage] = useState<string | null>(null)
+    62→  const [imageLoading, setImageLoading] = useState(false)
+    63→  const [imageError, setImageError] = useState('')
+    64→
+    65→  // Chat / writing state
+    66→  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+    67→  const [chatInput, setChatInput] = useState('')
+    68→  const [chatLoading, setChatLoading] = useState(false)
+    69→  const chatEndRef = useRef<HTMLDivElement>(null)
+    70→
+    71→  // Conversation persistence state
+    72→  const [conversations, setConversations] = useState<Conversation[]>([])
+    73→  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
+    74→
+    75→  // Search state
+    76→  const [searchQuery, setSearchQuery] = useState('')
+    77→  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+    78→  const [searchLoading, setSearchLoading] = useState(false)
+    79→  const [searchError, setSearchError] = useState('')
+    80→
+    81→  // Auth state
+    82→  const [userEmail, setUserEmail] = useState<string | null>(null)
+    83→  const [loginInput, setLoginInput] = useState('')
+    84→  const [loginError, setLoginError] = useState('')
+    85→  const [showLogin, setShowLogin] = useState(false)
+    86→
+    87→  const scrollToBottom = useCallback(() => {
+    88→    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+    89→  }, [])
+    90→
+    91→  // Load conversations from DB on mount
+    92→  const loadConversations = useCallback(async () => {
+    93→    try {
+    94→      const res = await fetch('/api/conversations')
+    95→      const data = await res.json()
+    96→      if (data.conversations) {
+    97→        setConversations(data.conversations)
+    98→      }
+    99→    } catch {}
+   100→  }, [])
+   101→
+   102→  useEffect(() => {
+   103→    if (mounted) {
+   104→      loadConversations()
+   105→      // Check if user is already logged in
+   106→      const saved = localStorage.getItem('ws_user_email')
+   107→      if (saved) {
+   108→        setUserEmail(saved)
+   109→      } else {
+   110→        setShowLogin(true)
+   111→      }
+   112→    }
+   113→  }, [mounted, loadConversations])
+   114→
+   115→  const handleLogin = () => {
+   116→    const email = loginInput.trim().toLowerCase()
+   117→    if (!email || !email.includes('@') || !email.includes('.')) {
+   118→      setLoginError('Adresse email invalide')
+   119→      return
+   120→    }
+   121→    localStorage.setItem('ws_user_email', email)
+   122→    setUserEmail(email)
+   123→    setShowLogin(false)
+   124→    setLoginInput('')
+   125→    setLoginError('')
+   126→  }
+   127→
+   128→  const handleLogout = () => {
+   129→    localStorage.removeItem('ws_user_email')
+   130→    setUserEmail(null)
+   131→    setShowLogin(true)
+   132→  }
+   133→
+   134→  const getUserInitial = () => {
+   135→    if (!userEmail) return '?'
+   136→    return userEmail.charAt(0).toUpperCase()
+   137→  }
+   138→
+   139→  const getUserName = () => {
+   140→    if (!userEmail) return ''
+   141→    return userEmail.split('@')[0]
+   142→  }
+   143→
+   144→  const handleNewConversation = async () => {
+   145→    try {
+   146→      const res = await fetch('/api/conversations', {
+   147→        method: 'POST',
+   148→        headers: { 'Content-Type': 'application/json' },
+   149→        body: JSON.stringify({ title: 'Nouvelle conversation' }),
+   150→      })
+   151→      const data = await res.json()
+   152→      if (data.conversation) {
+   153→        setActiveConversationId(data.conversation.id)
+   154→        setChatMessages([])
+   155→        setActivePanel('write')
+   156→        await loadConversations()
+   157→      }
+   158→    } catch {}
+   159→  }
+   160→
+   161→  const handleLoadConversation = async (id: string) => {
+   162→    try {
+   163→      const res = await fetch(`/api/conversations/${id}`)
+   164→      const data = await res.json()
+   165→      if (data.conversation) {
+   166→        setActiveConversationId(id)
+   167→        setChatMessages(data.conversation.messages.map((m: { role: string; content: string }) => ({
+   168→          role: m.role as 'user' | 'assistant',
+   169→          content: m.content,
+   170→        })))
+   171→        setActivePanel('write')
+   172→        scrollToBottom()
+   173→      }
+   174→    } catch {}
+   175→  }
+   176→
+   177→  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
+   178→    e.stopPropagation()
+   179→    try {
+   180→      await fetch(`/api/conversations/${id}`, { method: 'DELETE' })
+   181→      if (activeConversationId === id) {
+   182→        setActiveConversationId(null)
+   183→        setChatMessages([])
+   184→      }
+   185→      await loadConversations()
+   186→    } catch {}
+   187→  }
+   188→
+   189→  const handleGenerateImage = async () => {
+   190→    if (!imagePrompt.trim()) return
+   191→    setImageLoading(true)
+   192→    setImageError('')
+   193→    setGeneratedImage(null)
+   194→    try {
+   195→      const res = await fetch('/api/generate-image', {
+   196→        method: 'POST',
+   197→        headers: { 'Content-Type': 'application/json' },
+   198→        body: JSON.stringify({ prompt: imagePrompt }),
+   199→      })
+   200→      const data = await res.json()
+   201→      if (data.error) {
+   202→        setImageError(data.error)
+   203→      } else {
+   204→        setGeneratedImage(data.image)
+   205→      }
+   206→    } catch {
+   207→      setImageError('Erreur réseau')
+   208→    } finally {
+   209→      setImageLoading(false)
+   210→    }
+   211→  }
+   212→
+   213→  const handleSendChat = async () => {
+   214→    if (!chatInput.trim()) return
+   215→    const userMsg: ChatMessage = { role: 'user', content: chatInput }
+   216→    const newMessages = [...chatMessages, userMsg]
+   217→    setChatMessages(newMessages)
+   218→    setChatInput('')
+   219→    setChatLoading(true)
+   220→    scrollToBottom()
+   221→
+   222→    // Create conversation if none exists
+   223→    let convId = activeConversationId
+   224→    if (!convId) {
+   225→      try {
+   226→        const createRes = await fetch('/api/conversations', {
+   227→          method: 'POST',
+   228→          headers: { 'Content-Type': 'application/json' },
+   229→          body: JSON.stringify({ title: chatInput.slice(0, 50) }),
+   230→        })
+   231→        const createData = await createRes.json()
+   232→        if (createData.conversation) {
+   233→          convId = createData.conversation.id
+   234→          setActiveConversationId(convId)
+   235→        }
+   236→      } catch {}
+   237→    }
+   238→
+   239→    try {
+   240→      const res = await fetch('/api/chat', {
+   241→        method: 'POST',
+   242→        headers: { 'Content-Type': 'application/json' },
+   243→        body: JSON.stringify({ messages: newMessages, conversationId: convId }),
+   244→      })
+   245→      const data = await res.json()
+   246→      if (data.error) {
+   247→        setChatMessages([...newMessages, { role: 'assistant', content: `Erreur : ${data.error}` }])
+   248→      } else {
+   249→        setChatMessages([...newMessages, { role: 'assistant', content: data.content }])
+   250→      }
+   251→    } catch {
+   252→      setChatMessages([...newMessages, { role: 'assistant', content: 'Erreur réseau' }])
+   253→    } finally {
+   254→      setChatLoading(false)
+   255→      scrollToBottom()
+   256→      loadConversations()
+   257→    }
+   258→  }
+   259→
+   260→  const handleSearch = async () => {
+   261→    if (!searchQuery.trim()) return
+   262→    setSearchLoading(true)
+   263→    setSearchError('')
+   264→    setSearchResults([])
+   265→    try {
+   266→      const res = await fetch('/api/search', {
+   267→        method: 'POST',
+   268→        headers: { 'Content-Type': 'application/json' },
+   269→        body: JSON.stringify({ query: searchQuery }),
+   270→      })
+   271→      const data = await res.json()
+   272→      if (data.error) {
+   273→        setSearchError(data.error)
+   274→      } else {
+   275→        const results = data.results?.results || data.results || []
+   276→        setSearchResults(
+   277→          Array.isArray(results)
+   278→            ? results.slice(0, 8).map((r: Record<string, string>) => ({
+   279→                title: r.title || r.name || '',
+   280→                url: r.url || r.link || '',
+   281→                snippet: r.snippet || r.content || r.description || '',
+   282→              }))
+   283→            : []
+   284→        )
+   285→      }
+   286→    } catch {
+   287→      setSearchError('Erreur réseau')
+   288→    } finally {
+   289→      setSearchLoading(false)
+   290→    }
+   291→  }
+   292→
+   293→  const handleMainInput = async () => {
+   294→    if (!inputValue.trim()) return
+   295→
+   296→    // Create a new conversation
+   297→    let convId: string | null = null
+   298→    try {
+   299→      const createRes = await fetch('/api/conversations', {
+   300→        method: 'POST',
+   301→        headers: { 'Content-Type': 'application/json' },
+   302→        body: JSON.stringify({ title: inputValue.slice(0, 50) }),
+   303→      })
+   304→      const createData = await createRes.json()
+   305→      if (createData.conversation) {
+   306→        convId = createData.conversation.id
+   307→        setActiveConversationId(convId)
+   308→      }
+   309→    } catch {}
+   310→
+   311→    const userContent = inputValue
+   312→    setActivePanel('write')
+   313→    setChatMessages([{ role: 'user', content: userContent }])
+   314→    setChatInput('')
+   315→    setInputValue('')
+   316→    setChatLoading(true)
+   317→
+   318→    fetch('/api/chat', {
+   319→      method: 'POST',
+   320→      headers: { 'Content-Type': 'application/json' },
+   321→      body: JSON.stringify({ messages: [{ role: 'user', content: userContent }], conversationId: convId }),
+   322→    })
+   323→      .then((r) => r.json())
+   324→      .then((data) => {
+   325→        if (data.content) {
+   326→          setChatMessages([
+   327→            { role: 'user', content: userContent },
+   328→            { role: 'assistant', content: data.content },
+   329→          ])
+   330→        }
+   331→      })
+   332→      .catch(() => {})
+   333→      .finally(() => {
+   334→        setChatLoading(false)
+   335→        scrollToBottom()
+   336→        loadConversations()
+   337→      })
+   338→  }
+   339→
+   340→  const actions = [
+   341→    { icon: ImageIcon, label: 'Créer une image', panel: 'image' as const, color: 'from-violet-500/20 to-fuchsia-500/20', hoverBorder: 'hover:border-violet-500/40', iconColor: 'text-violet-400' },
+   342→    { icon: PenLine, label: 'Écrire ou modifier', panel: 'write' as const, color: 'from-emerald-500/20 to-teal-500/20', hoverBorder: 'hover:border-emerald-500/40', iconColor: 'text-emerald-400' },
+   343→    { icon: Search, label: 'Faire une recherche', panel: 'search' as const, color: 'from-amber-500/20 to-orange-500/20', hoverBorder: 'hover:border-amber-500/40', iconColor: 'text-amber-400' },
+   344→  ]
+   345→
+   346→  return (
+   347→    <div className="min-h-screen flex bg-[#050510] text-white font-[var(--font-geist-sans)] overflow-hidden">
+   348→      {/* ===== FRANCE-THEMED BACKGROUND ===== */}
+   349→      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+   350→        {/* AI-generated Paris background — cinematic Ken Burns slow zoom */}
+   351→        <div
+   352→          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-75 animate-[kenburns_60s_ease-in-out_infinite_alternate]"
+   353→          style={{ backgroundImage: 'url(/france-bg.png)' }}
+   354→        />
+   355→
+   356→        {/* Very subtle tricolor tint — barely there, just a whisper */}
+   357→        <div className="absolute inset-0 flex">
+   358→          <div className="w-1/3 h-full bg-[#002395]/8" />
+   359→          <div className="w-1/3 h-full bg-white/[0.01]" />
+   360→          <div className="w-1/3 h-full bg-[#ED2939]/7" />
+   361→        </div>
+   362→
+   363→        {/* Faint tricolor diagonal glow */}
+   364→        <div className="absolute inset-0 bg-gradient-to-br from-[#002395]/5 via-transparent to-[#ED2939]/5" />
+   365→
+   366→        {/* Floating bleu orb — very subtle */}
+   367→        <div className="absolute -top-[10%] -left-[5%] w-[700px] h-[700px] rounded-full bg-gradient-to-br from-[#002395]/8 via-[#003399]/4 to-transparent animate-[float1_25s_ease-in-out_infinite] blur-3xl" />
+   368→        {/* Floating rouge orb — very subtle */}
+   369→        <div className="absolute -bottom-[10%] -right-[5%] w-[800px] h-[800px] rounded-full bg-gradient-to-tl from-[#ED2939]/7 via-[#C8102E]/3 to-transparent animate-[float2_30s_ease-in-out_infinite] blur-3xl" />
+   370→        {/* Floating blanc orb — barely visible */}
+   371→        <div className="absolute top-[20%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-white/[0.03] via-white/[0.01] to-transparent animate-[float3_20s_ease-in-out_infinite] blur-3xl" />
+   372→
+   373→        {/* Bleu accent spot — faint */}
+   374→        <div className="absolute top-[15%] right-[15%] w-[300px] h-[300px] rounded-full bg-[#002395]/5 animate-[float4_18s_ease-in-out_infinite] blur-2xl" />
+   375→        {/* Rouge accent spot — faint */}
+   376→        <div className="absolute bottom-[10%] left-[15%] w-[350px] h-[350px] rounded-full bg-[#ED2939]/4 animate-[float5_22s_ease-in-out_infinite] blur-2xl" />
+   377→        {/* White accent spot — faint */}
+   378→        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-white/[0.015] animate-[float3_22s_ease-in-out_infinite] blur-2xl" />
+   379→
+   380→        {/* Hair-thin tricolor lines at edges — ultra subtle */}
+   381→        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-[#002395] via-white to-[#ED2939] opacity-20" />
+   382→        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-[#002395] via-white to-[#ED2939] opacity-20" />
+   383→
+   384→        {/* Light vignette — keeps depth without killing the image */}
+   385→        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.15)_50%,rgba(0,0,0,0.45)_100%)]" />
+   386→      </div>
+   387→
+   388→      {/* ===== SIDEBAR ===== */}
+   389→      <aside
+   390→        className={`fixed md:relative z-40 flex flex-col w-[260px] h-screen bg-[#0d0d1a]/95 backdrop-blur-xl border-r border-[#002395]/[0.08] transition-transform duration-300 ${
+   391→          sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+   392→        }`}
+   393→      >
+   394→        {/* Sidebar Header */}
+   395→        <div className="flex items-center gap-3 px-4 py-4">
+   396→          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center shadow-lg shadow-[#002395]/20">
+   397→            <span className="text-black font-bold text-sm tracking-tight">WS</span>
+   398→          </div>
+   399→          <span className="text-white font-semibold text-base tracking-tight">WS</span>
+   400→          <button
+   401→            className="ml-auto md:hidden text-white/50 hover:text-white"
+   402→            onClick={() => setSidebarOpen(false)}
+   403→          >
+   404→            <X size={18} />
+   405→          </button>
+   406→        </div>
+   407→
+   408→        {/* Search */}
+   409→        <div className="px-3 mb-3">
+   410→          <div className="flex items-center gap-2 bg-[#1a1a2e]/90 hover:bg-[#1e1e38]/95 rounded-xl px-3 py-2.5 border border-white/[0.08] transition-colors cursor-text backdrop-blur-md">
+   411→            <Search size={14} className="text-white/30" />
+   412→            <span className="text-white/25 text-sm">Rechercher</span>
+   413→          </div>
+   414→        </div>
+   415→
+   416→        {/* New Conversation Button */}
+   417→        <div className="px-3 mb-3">
+   418→          <button
+   419→            onClick={handleNewConversation}
+   420→            className="w-full flex items-center gap-2.5 bg-[#1a1a2e]/80 hover:bg-[#22223a]/95 rounded-xl px-3 py-2.5 text-white/70 hover:text-white transition-all text-sm border border-white/[0.06] hover:border-emerald-500/20"
+   421→          >
+   422→            <Plus size={16} className="text-emerald-400/70" />
+   423→            Nouvelle conversation
+   424→          </button>
+   425→        </div>
+   426→
+   427→        {/* Conversation History */}
+   428→        <div className="px-3 flex-1 overflow-y-auto custom-scrollbar">
+   429→          <p className="text-white/30 text-xs font-medium uppercase tracking-widest mb-2 px-1">Conversations</p>
+   430→          <div className="space-y-0.5">
+   431→            {conversations.length === 0 && (
+   432→              <p className="text-white/20 text-xs px-3 py-2">Aucune conversation</p>
+   433→            )}
+   434→            {conversations.map((conv) => (
+   435→              <div
+   436→                key={conv.id}
+   437→                onClick={() => handleLoadConversation(conv.id)}
+   438→                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm cursor-pointer transition-all group ${
+   439→                  activeConversationId === conv.id
+   440→                    ? 'bg-emerald-500/15 text-white/90 border border-emerald-500/15'
+   441→                    : 'text-white/45 hover:bg-[#1a1a2e]/70 hover:text-white/80'
+   442→                }`}
+   443→              >
+   444→                <MessageSquare size={14} className={activeConversationId === conv.id ? 'text-emerald-400/70' : 'text-white/20 group-hover:text-white/40'} />
+   445→                <span className="truncate flex-1">{conv.title}</span>
+   446→                <button
+   447→                  onClick={(e) => handleDeleteConversation(conv.id, e)}
+   448→                  className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-400 transition-all flex-shrink-0"
+   449→                >
+   450→                  <Trash2 size={12} />
+   451→                </button>
+   452→              </div>
+   453→            ))}
+   454→          </div>
+   455→        </div>
+   456→
+   457→        {/* Sidebar Footer */}
+   458→        <div className="p-3 border-t border-white/[0.06]">
+   459→          <div className="flex items-center gap-3 px-2 py-2">
+   460→            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#002395] to-[#ED2939] flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-[#002395]/20">
+   461→              {getUserInitial()}
+   462→            </div>
+   463→            <div className="flex-1 min-w-0">
+   464→              <p className="text-white/80 text-sm font-medium truncate">{getUserName()}</p>
+   465→              <p className="text-white/25 text-xs truncate">{userEmail}</p>
+   466→            </div>
+   467→            <button
+   468→              onClick={handleLogout}
+   469→              className="text-white/20 hover:text-red-400 transition-colors"
+   470→              title="Se déconnecter"
+   471→            >
+   472→              <LogOut size={14} />
+   473→            </button>
+   474→          </div>
+   475→          <button className="w-full mt-2 flex items-center justify-center gap-2 bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 rounded-xl px-3 py-2.5 text-white/60 hover:text-white transition-all text-sm border border-white/[0.08]">
+   476→            <Star size={14} className="text-amber-400" />
+   477→            Mettre à niveau
+   478→          </button>
+   479→        </div>
+   480→      </aside>
+   481→
+   482→      {/* Sidebar overlay on mobile */}
+   483→      {sidebarOpen && (
+   484→        <div
+   485→          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+   486→          onClick={() => setSidebarOpen(false)}
+   487→        />
+   488→      )}
+   489→
+   490→      {/* ===== MAIN CONTENT ===== */}
+   491→      <main className="flex-1 flex flex-col min-h-screen relative">
+   492→        {/* Top Bar */}
+   493→        <header className="flex items-center justify-between px-4 py-3 md:px-6 relative z-10">
+   494→          <button
+   495→            className="md:hidden text-white/50 hover:text-white transition-colors"
+   496→            onClick={() => setSidebarOpen(true)}
+   497→          >
+   498→            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+   499→              <line x1="3" y1="6" x2="21" y2="6" />
+   500→              <line x1="3" y1="12" x2="21" y2="12" />
+   501→              <line x1="3" y1="18" x2="21" y2="18" />
+   502→            </svg>
+   503→          </button>
+   504→          <div className="md:hidden flex items-center gap-2">
+   505→            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center">
+   506→              <span className="text-black font-bold text-[10px]">WS</span>
+   507→            </div>
+   508→          </div>
+   509→          <div className="flex items-center gap-2 ml-auto">
+   510→            <button className="flex items-center gap-1.5 bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 rounded-full px-3 py-1.5 text-white/60 hover:text-white transition-all text-sm border border-white/[0.08]">
+   511→              <Star size={12} className="text-amber-400" />
+   512→              Mettre à niveau
+   513→            </button>
+   514→            <button className="w-8 h-8 rounded-full bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all">
+   515→              <Settings size={16} className="text-white/40" />
+   516→            </button>
+   517→          </div>
+   518→        </header>
+   519→
+   520→        {/* Center / Home View */}
+   521→        <AnimatePresence mode="wait">
+   522→          {activePanel === null ? (
+   523→            <motion.div
+   524→              key="home"
+   525→              initial={{ opacity: 0 }}
+   526→              animate={{ opacity: 1 }}
+   527→              exit={{ opacity: 0, y: -20 }}
+   528→              transition={{ duration: 0.3 }}
+   529→              className="flex-1 flex flex-col items-center justify-center px-4 -mt-16 relative z-10"
+   530→            >
+   531→              {/* WS Logo - Large with glow */}
+   532→              <motion.div
+   533→                initial={{ opacity: 0, scale: 0.8 }}
+   534→                animate={{ opacity: 1, scale: 1 }}
+   535→                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+   536→                className="relative mb-6"
+   537→              >
+   538→                {/* Animated glow ring — French tricolor */}
+   539→                <div className="absolute inset-0 -m-8 rounded-full bg-gradient-to-br from-[#002395]/15 via-white/5 to-[#ED2939]/15 blur-2xl animate-pulse" />
+   540→                <h1 className="relative text-8xl md:text-[10rem] font-bold tracking-tighter bg-gradient-to-b from-white via-white/90 to-white/50 bg-clip-text text-transparent">
+   541→                  WS
+   542→                </h1>
+   543→              </motion.div>
+   544→
+   545→              {/* Tagline */}
+   546→              <motion.p
+   547→                initial={{ opacity: 0, y: 10 }}
+   548→                animate={{ opacity: 1, y: 0 }}
+   549→                transition={{ delay: 0.2, duration: 0.6 }}
+   550→                className="text-white/40 text-lg md:text-xl mb-10 flex items-center gap-2"
+   551→              >
+   552→                <Sparkles size={16} className="text-amber-400/60" />
+   553→                Toujours prêt à répondre.
+   554→              </motion.p>
+   555→
+   556→              {/* Search Bar */}
+   557→              <motion.div
+   558→                initial={{ opacity: 0, y: 20 }}
+   559→                animate={{ opacity: 1, y: 0 }}
+   560→                transition={{ delay: 0.3, duration: 0.6 }}
+   561→                className="w-full max-w-2xl"
+   562→              >
+   563→                <div className="relative flex items-center bg-[#12122a]/95 backdrop-blur-xl rounded-2xl px-5 py-4 border border-white/[0.10] hover:border-[#002395]/30 focus-within:border-[#002395]/40 focus-within:bg-[#161630]/95 transition-all shadow-2xl shadow-black/30">
+   564→                  <Sparkles size={18} className="text-white/20 mr-3 flex-shrink-0" />
+   565→                  <input
+   566→                    type="text"
+   567→                    value={inputValue}
+   568→                    onChange={(e) => setInputValue(e.target.value)}
+   569→                    onKeyDown={(e) => e.key === 'Enter' && handleMainInput()}
+   570→                    placeholder="Poser une question à WS..."
+   571→                    className="flex-1 bg-transparent text-white placeholder:text-white/25 outline-none text-base"
+   572→                  />
+   573→                  <div className="flex items-center gap-2 ml-3">
+   574→                    <button className="w-8 h-8 rounded-xl bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all">
+   575→                      <Mic size={16} className="text-white/40" />
+   576→                    </button>
+   577→                    <button className="w-8 h-8 rounded-xl bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all">
+   578→                      <Volume2 size={16} className="text-white/40" />
+   579→                    </button>
+   580→                    {inputValue.trim() && (
+   581→                      <motion.button
+   582→                        initial={{ scale: 0 }}
+   583→                        animate={{ scale: 1 }}
+   584→                        onClick={handleMainInput}
+   585→                        className="w-8 h-8 rounded-xl bg-[#002395]/80 hover:bg-[#002395] flex items-center justify-center transition-all"
+   586→                      >
+   587→                        <ArrowRight size={16} className="text-white" />
+   588→                      </motion.button>
+   589→                    )}
+   590→                  </div>
+   591→                </div>
+   592→              </motion.div>
+   593→
+   594→              {/* Action Buttons */}
+   595→              <motion.div
+   596→                initial={{ opacity: 0, y: 20 }}
+   597→                animate={{ opacity: 1, y: 0 }}
+   598→                transition={{ delay: 0.5, duration: 0.6 }}
+   599→                className="flex flex-wrap items-center justify-center gap-3 mt-6"
+   600→              >
+   601→                {actions.map((action, i) => (
+   602→                  <motion.button
+   603→                    key={i}
+   604→                    whileHover={{ scale: 1.03, y: -2 }}
+   605→                    whileTap={{ scale: 0.97 }}
+   606→                    onClick={() => setActivePanel(action.panel)}
+   607→                    className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl border border-white/[0.06] ${action.hoverBorder} bg-gradient-to-r ${action.color} hover:bg-opacity-150 text-white/70 hover:text-white transition-all duration-300 backdrop-blur-sm`}
+   608→                  >
+   609→                    <action.icon size={16} className={action.iconColor} />
+   610→                    <span className="text-sm font-medium">{action.label}</span>
+   611→                  </motion.button>
+   612→                ))}
+   613→              </motion.div>
+   614→            </motion.div>
+   615→          ) : (
+   616→            /* ===== ACTIVE PANEL ===== */
+   617→            <motion.div
+   618→              key={activePanel}
+   619→              initial={{ opacity: 0, y: 30 }}
+   620→              animate={{ opacity: 1, y: 0 }}
+   621→              exit={{ opacity: 0, y: 30 }}
+   622→              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+   623→              className="flex-1 flex flex-col relative z-10 px-4 md:px-8 py-4 max-w-4xl mx-auto w-full bg-[#0e0e1c]/95 backdrop-blur-2xl rounded-2xl border border-white/[0.08] shadow-2xl shadow-black/40"
+   624→            >
+   625→              {/* Panel header */}
+   626→              <div className="flex items-center justify-between mb-6">
+   627→                <div className="flex items-center gap-3">
+   628→                  <button
+   629→                    onClick={() => setActivePanel(null)}
+   630→                    className="w-8 h-8 rounded-xl bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all"
+   631→                  >
+   632→                    <X size={16} className="text-white/50" />
+   633→                  </button>
+   634→                  <h2 className="text-lg font-semibold text-white/80">
+   635→                    {activePanel === 'image' && 'Créer une image'}
+   636→                    {activePanel === 'write' && 'Écrire ou modifier'}
+   637→                    {activePanel === 'search' && 'Recherche web'}
+   638→                  </h2>
+   639→                </div>
+   640→                <div
+   641→                  className={`w-2 h-2 rounded-full ${
+   642→                    activePanel === 'image'
+   643→                      ? 'bg-violet-400'
+   644→                      : activePanel === 'write'
+   645→                        ? 'bg-emerald-400'
+   646→                        : 'bg-amber-400'
+   647→                  }`}
+   648→                />
+   649→              </div>
+   650→
+   651→              {/* ===== IMAGE PANEL ===== */}
+   652→              {activePanel === 'image' && (
+   653→                <div className="flex-1 flex flex-col gap-6">
+   654→                  <div className="flex gap-3">
+   655→                    <div className="flex-1 relative">
+   656→                      <input
+   657→                        type="text"
+   658→                        value={imagePrompt}
+   659→                        onChange={(e) => setImagePrompt(e.target.value)}
+   660→                        onKeyDown={(e) => e.key === 'Enter' && handleGenerateImage()}
+   661→                        placeholder="Décrivez l'image que vous souhaitez créer..."
+   662→                        className="w-full bg-[#1e1e32] rounded-xl px-4 py-3 text-white placeholder:text-white/40 outline-none border border-white/[0.10] focus:border-violet-500/40 transition-all"
+   663→                      />
+   664→                    </div>
+   665→                    <motion.button
+   666→                      whileHover={{ scale: 1.03 }}
+   667→                      whileTap={{ scale: 0.97 }}
+   668→                      onClick={handleGenerateImage}
+   669→                      disabled={imageLoading || !imagePrompt.trim()}
+   670→                      className="px-5 py-3 rounded-xl bg-violet-500/80 hover:bg-violet-500 disabled:opacity-40 disabled:hover:bg-violet-500/80 text-white font-medium text-sm flex items-center gap-2 transition-all"
+   671→                    >
+   672→                      {imageLoading ? (
+   673→                        <Loader2 size={16} className="animate-spin" />
+   674→                      ) : (
+   675→                        <ImageIcon size={16} />
+   676→                      )}
+   677→                      Générer
+   678→                    </motion.button>
+   679→                  </div>
+   680→
+   681→                  {imageError && (
+   682→                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-300 text-sm">
+   683→                      {imageError}
+   684→                    </div>
+   685→                  )}
+   686→
+   687→                  {imageLoading && (
+   688→                    <div className="flex-1 flex items-center justify-center">
+   689→                      <div className="flex flex-col items-center gap-4">
+   690→                        <div className="relative">
+   691→                          <div className="w-16 h-16 rounded-full border-2 border-violet-500/20 border-t-violet-500 animate-spin" />
+   692→                          <ImageIcon size={20} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-violet-400" />
+   693→                        </div>
+   694→                        <p className="text-white/40 text-sm">Création en cours...</p>
+   695→                      </div>
+   696→                    </div>
+   697→                  )}
+   698→
+   699→                  {generatedImage && !imageLoading && (
+   700→                    <motion.div
+   701→                      initial={{ opacity: 0, scale: 0.95 }}
+   702→                      animate={{ opacity: 1, scale: 1 }}
+   703→                      className="flex-1 flex flex-col items-center gap-4"
+   704→                    >
+   705→                      <div className="relative rounded-2xl overflow-hidden border border-white/[0.06] shadow-2xl shadow-violet-500/10 max-w-lg">
+   706→                        <img
+   707→                          src={generatedImage}
+   708→                          alt={imagePrompt}
+   709→                          className="w-full h-auto"
+   710→                        />
+   711→                      </div>
+   712→                      <p className="text-white/30 text-sm text-center max-w-md">
+   713→                        &ldquo;{imagePrompt}&rdquo;
+   714→                      </p>
+   715→                    </motion.div>
+   716→                  )}
+   717→
+   718→                  {!generatedImage && !imageLoading && !imageError && (
+   719→                    <div className="flex-1 flex items-center justify-center">
+   720→                      <div className="text-center">
+   721→                        <div className="w-20 h-20 rounded-2xl bg-violet-500/10 border border-violet-500/10 flex items-center justify-center mx-auto mb-4">
+   722→                          <ImageIcon size={32} className="text-violet-400/50" />
+   723→                        </div>
+   724→                        <p className="text-white/30 text-sm">Décrivez votre image et cliquez Générer</p>
+   725→                      </div>
+   726→                    </div>
+   727→                  )}
+   728→                </div>
+   729→              )}
+   730→
+   731→              {/* ===== WRITE / CHAT PANEL ===== */}
+   732→              {activePanel === 'write' && (
+   733→                <div className="flex-1 flex flex-col gap-4 min-h-0">
+   734→                  {/* Messages */}
+   735→                  <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+   736→                    {chatMessages.length === 0 && (
+   737→                      <div className="flex-1 flex items-center justify-center h-full min-h-[200px]">
+   738→                        <div className="text-center">
+   739→                          <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 border border-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+   740→                            <PenLine size={32} className="text-emerald-400/50" />
+   741→                          </div>
+   742→                          <p className="text-white/30 text-sm">Posez une question ou demandez à WS d&apos;écrire quelque chose</p>
+   743→                        </div>
+   744→                      </div>
+   745→                    )}
+   746→                    {chatMessages.map((msg, i) => (
+   747→                      <motion.div
+   748→                        key={i}
+   749→                        initial={{ opacity: 0, y: 10 }}
+   750→                        animate={{ opacity: 1, y: 0 }}
+   751→                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+   752→                      >
+   753→                        <div className={`max-w-[85%] ${msg.role === 'assistant' ? 'flex gap-3' : ''}`}>
+   754→                          {msg.role === 'assistant' && (
+   755→                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg shadow-[#002395]/20">
+   756→                              <span className="text-black font-bold text-[9px]">WS</span>
+   757→                            </div>
+   758→                          )}
+   759→                          <div
+   760→                            className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+   761→                              msg.role === 'user'
+   762→                                ? 'bg-emerald-500/40 border border-emerald-500/20 text-white/95'
+   763→                                : 'bg-[#1e1e32] border border-white/[0.10] text-white/90'
+   764→                            }`}
+   765→                          >
+   766→                            <div className="whitespace-pre-wrap">{msg.content}</div>
+   767→                          </div>
+   768→                        </div>
+   769→                      </motion.div>
+   770→                    ))}
+   771→                    {chatLoading && (
+   772→                      <div className="flex justify-start">
+   773→                        <div className="flex gap-3">
+   774→                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg shadow-[#002395]/20">
+   775→                            <span className="text-black font-bold text-[9px]">WS</span>
+   776→                          </div>
+   777→                          <div className="bg-[#1e1e32] border border-white/[0.10] rounded-2xl px-4 py-3">
+   778→                            <div className="flex items-center gap-1.5">
+   779→                              <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+   780→                              <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+   781→                              <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+   782→                            </div>
+   783→                          </div>
+   784→                        </div>
+   785→                      </div>
+   786→                    )}
+   787→                    <div ref={chatEndRef} />
+   788→                  </div>
+   789→
+   790→                  {/* Chat input */}
+   791→                  <div className="flex gap-3 pt-2">
+   792→                    <input
+   793→                      type="text"
+   794→                      value={chatInput}
+   795→                      onChange={(e) => setChatInput(e.target.value)}
+   796→                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendChat()}
+   797→                      placeholder="Écrivez votre message..."
+   798→                      className="flex-1 bg-[#1e1e32] rounded-xl px-4 py-3 text-white placeholder:text-white/40 outline-none border border-white/[0.10] focus:border-emerald-500/40 transition-all"
+   799→                    />
+   800→                    <motion.button
+   801→                      whileHover={{ scale: 1.03 }}
+   802→                      whileTap={{ scale: 0.97 }}
+   803→                      onClick={handleSendChat}
+   804→                      disabled={chatLoading || !chatInput.trim()}
+   805→                      className="px-4 py-3 rounded-xl bg-emerald-500/80 hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-500/80 text-white transition-all"
+   806→                    >
+   807→                      <Send size={16} />
+   808→                    </motion.button>
+   809→                  </div>
+   810→                </div>
+   811→              )}
+   812→
+   813→              {/* ===== SEARCH PANEL ===== */}
+   814→              {activePanel === 'search' && (
+   815→                <div className="flex-1 flex flex-col gap-6">
+   816→                  <div className="flex gap-3">
+   817→                    <div className="flex-1 relative">
+   818→                      <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/25" />
+   819→                      <input
+   820→                        type="text"
+   821→                        value={searchQuery}
+   822→                        onChange={(e) => setSearchQuery(e.target.value)}
+   823→                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+   824→                        placeholder="Rechercher sur le web..."
+   825→                        className="w-full bg-[#1e1e32] rounded-xl pl-11 pr-4 py-3 text-white placeholder:text-white/40 outline-none border border-white/[0.10] focus:border-amber-500/40 transition-all"
+   826→                      />
+   827→                    </div>
+   828→                    <motion.button
+   829→                      whileHover={{ scale: 1.03 }}
+   830→                      whileTap={{ scale: 0.97 }}
+   831→                      onClick={handleSearch}
+   832→                      disabled={searchLoading || !searchQuery.trim()}
+   833→                      className="px-5 py-3 rounded-xl bg-amber-500/80 hover:bg-amber-500 disabled:opacity-40 disabled:hover:bg-amber-500/80 text-white font-medium text-sm flex items-center gap-2 transition-all"
+   834→                    >
+   835→                      {searchLoading ? (
+   836→                        <Loader2 size={16} className="animate-spin" />
+   837→                      ) : (
+   838→                        <Search size={16} />
+   839→                      )}
+   840→                      Chercher
+   841→                    </motion.button>
+   842→                  </div>
+   843→
+   844→                  {searchError && (
+   845→                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-300 text-sm">
+   846→                      {searchError}
+   847→                    </div>
+   848→                  )}
+   849→
+   850→                  {searchLoading && (
+   851→                    <div className="flex items-center justify-center py-12">
+   852→                      <div className="flex flex-col items-center gap-4">
+   853→                        <div className="relative">
+   854→                          <div className="w-14 h-14 rounded-full border-2 border-amber-500/20 border-t-amber-500 animate-spin" />
+   855→                          <Search size={18} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-amber-400" />
+   856→                        </div>
+   857→                        <p className="text-white/40 text-sm">Recherche en cours...</p>
+   858→                      </div>
+   859→                    </div>
+   860→                  )}
+   861→
+   862→                  {searchResults.length > 0 && !searchLoading && (
+   863→                    <motion.div
+   864→                      initial={{ opacity: 0 }}
+   865→                      animate={{ opacity: 1 }}
+   866→                      className="space-y-3 overflow-y-auto max-h-[60vh] custom-scrollbar"
+   867→                    >
+   868→                      <p className="text-white/30 text-xs uppercase tracking-widest font-medium">
+   869→                        {searchResults.length} résultat{searchResults.length > 1 ? 's' : ''}
+   870→                      </p>
+   871→                      {searchResults.map((result, i) => (
+   872→                        <motion.a
+   873→                          key={i}
+   874→                          href={result.url}
+   875→                          target="_blank"
+   876→                          rel="noopener noreferrer"
+   877→                          initial={{ opacity: 0, y: 10 }}
+   878→                          animate={{ opacity: 1, y: 0 }}
+   879→                          transition={{ delay: i * 0.05 }}
+   880→                          className="block bg-[#1e1e32] hover:bg-[#26264a] border border-white/[0.10] hover:border-amber-500/20 rounded-xl p-4 transition-all group"
+   881→                        >
+   882→                          <div className="flex items-start gap-3">
+   883→                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+   884→                              <GlobeIcon className="text-amber-400/60" size={14} />
+   885→                            </div>
+   886→                            <div className="flex-1 min-w-0">
+   887→                              <h3 className="text-white/80 text-sm font-medium group-hover:text-amber-300 transition-colors truncate">
+   888→                                {result.title || 'Sans titre'}
+   889→                              </h3>
+   890→                              <p className="text-white/20 text-xs truncate mt-0.5">{result.url}</p>
+   891→                              <p className="text-white/40 text-sm mt-1.5 line-clamp-2">{result.snippet}</p>
+   892→                            </div>
+   893→                            <ArrowRight size={14} className="text-white/10 group-hover:text-amber-400/50 transition-colors mt-1 flex-shrink-0" />
+   894→                          </div>
+   895→                        </motion.a>
+   896→                      ))}
+   897→                    </motion.div>
+   898→                  )}
+   899→
+   900→                  {searchResults.length === 0 && !searchLoading && !searchError && (
+   901→                    <div className="flex-1 flex items-center justify-center">
+   902→                      <div className="text-center">
+   903→                        <div className="w-20 h-20 rounded-2xl bg-amber-500/10 border border-amber-500/10 flex items-center justify-center mx-auto mb-4">
+   904→                          <Search size={32} className="text-amber-400/50" />
+   905→                        </div>
+   906→                        <p className="text-white/30 text-sm">Tapez votre recherche et cliquez Chercher</p>
+   907→                      </div>
+   908→                    </div>
+   909→                  )}
+   910→                </div>
+   911→              )}
+   912→            </motion.div>
+   913→          )}
+   914→        </AnimatePresence>
+   915→
+   916→        {/* Footer */}
+   917→        <footer className="mt-auto px-4 py-4 text-center relative z-10">
+   918→          <p className="text-white/15 text-xs">
+   919→            WS peut faire des erreurs. Envisagez de vérifier les informations importantes.
+   920→          </p>
+   921→        </footer>
+   922→      </main>
+   923→
+   924→      {/* ===== LOGIN MODAL ===== */}
+   925→      <AnimatePresence>
+   926→        {showLogin && (
+   927→          <motion.div
+   928→            initial={{ opacity: 0 }}
+   929→            animate={{ opacity: 1 }}
+   930→            exit={{ opacity: 0 }}
+   931→            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md"
+   932→          >
+   933→            <motion.div
+   934→              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+   935→              animate={{ opacity: 1, scale: 1, y: 0 }}
+   936→              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+   937→              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+   938→              className="w-full max-w-md mx-4"
+   939→            >
+   940→              <div className="bg-[#0e0e1c]/98 backdrop-blur-2xl rounded-3xl border border-white/[0.08] shadow-2xl shadow-black/60 p-8">
+   941→                {/* WS Logo */}
+   942→                <div className="flex justify-center mb-6">
+   943→                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center shadow-xl shadow-[#002395]/30">
+   944→                    <span className="text-black font-bold text-lg tracking-tight">WS</span>
+   945→                  </div>
+   946→                </div>
+   947→
+   948→                <h2 className="text-2xl font-bold text-center text-white mb-2">Bienvenue sur WS</h2>
+   949→                <p className="text-white/40 text-center text-sm mb-8">Connectez-vous avec votre adresse email pour commencer</p>
+   950→
+   951→                <div className="space-y-4">
+   952→                  <div className="relative">
+   953→                    <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
+   954→                    <input
+   955→                      type="email"
+   956→                      value={loginInput}
+   957→                      onChange={(e) => { setLoginInput(e.target.value); setLoginError('') }}
+   958→                      onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+   959→                      placeholder="votre@email.com"
+   960→                      className="w-full bg-[#1e1e32] rounded-xl pl-11 pr-4 py-3.5 text-white placeholder:text-white/35 outline-none border border-white/[0.10] focus:border-[#002395]/40 transition-all text-base"
+   961→                      autoFocus
+   962→                    />
+   963→                  </div>
+   964→
+   965→                  {loginError && (
+   966→                    <p className="text-red-400 text-sm text-center">{loginError}</p>
+   967→                  )}
+   968→
+   969→                  <motion.button
+   970→                    whileHover={{ scale: 1.02 }}
+   971→                    whileTap={{ scale: 0.98 }}
+   972→                    onClick={handleLogin}
+   973→                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#002395] to-[#ED2939] hover:from-[#003399] hover:to-[#C8102E] text-white font-semibold text-base transition-all shadow-lg shadow-[#002395]/20"
+   974→                  >
+   975→                    Continuer
+   976→                  </motion.button>
+   977→                </div>
+   978→
+   979→                <p className="text-white/20 text-xs text-center mt-6">
+   980→                  En continuant, vous acceptez les conditions d&apos;utilisation de WS.
+   981→                </p>
+   982→              </div>
+   983→            </motion.div>
+   984→          </motion.div>
+   985→        )}
+   986→      </AnimatePresence>
+   987→    </div>
+   988→  )
+   989→}
+   990→
+   991→function GlobeIcon({ className, size }: { className?: string; size?: number }) {
+   992→  return (
+   993→    <svg
+   994→      width={size || 24}
+   995→      height={size || 24}
+   996→      viewBox="0 0 24 24"
+   997→      fill="none"
+   998→      stroke="currentColor"
+   999→      strokeWidth="2"
+  1000→      className={className}
+  1001→    >
+  1002→      <circle cx="12" cy="12" r="10" />
+  1003→      <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+  1004→      <path d="M2 12h20" />
+  1005→    </svg>
+  1006→  )
+  1007→}
+  1008→

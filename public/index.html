@@ -347,6 +347,27 @@
     }
     .footer p { color: rgba(255,255,255,0.15); font-size: 12px; }
 
+    .guest-banner {
+      display: flex; align-items: center; justify-content: center;
+      padding: 8px 16px; border-radius: 12px; margin-top: 8px;
+      background: rgba(245,158,11,0.10); border: 1px solid rgba(245,158,11,0.15);
+      color: rgba(251,191,36,0.80); font-size: 13px;
+    }
+    .guest-banner.limit {
+      background: rgba(239,68,68,0.10); border: 1px solid rgba(239,68,68,0.20);
+      color: #fca5a5;
+    }
+    .chat-guest-banner {
+      display: flex; align-items: center; justify-content: center;
+      padding: 8px 12px; border-radius: 10px; margin-bottom: 8px;
+      background: rgba(245,158,11,0.10); border: 1px solid rgba(245,158,11,0.15);
+      color: rgba(251,191,36,0.80); font-size: 12px;
+    }
+    .chat-guest-banner.limit {
+      background: rgba(239,68,68,0.10); border: 1px solid rgba(239,68,68,0.20);
+      color: #fca5a5;
+    }
+
     /* ===== EMPTY STATE ===== */
     .empty-state {
       flex: 1; display: flex; align-items: center; justify-content: center;
@@ -423,8 +444,11 @@
             <p class="user-name" id="userName">Connexion...</p>
             <p class="user-plan" id="userEmail"></p>
           </div>
-          <button onclick="handleLogout()" style="background:none;border:none;color:rgba(255,255,255,0.2);cursor:pointer;padding:2px;margin-left:auto;" title="Se déconnecter">
+          <button id="logoutBtn" onclick="handleLogout()" style="background:none;border:none;color:rgba(255,255,255,0.2);cursor:pointer;padding:2px;margin-left:auto;" title="Se déconnecter">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
+          <button id="loginBtn" class="hidden" onclick="loginReason='welcome';updateLoginModalContent();loginModal.classList.remove('hidden');setTimeout(()=>loginInputField.focus(),300);" style="background:none;border:none;color:rgba(255,255,255,0.2);cursor:pointer;padding:2px;margin-left:auto;" title="Se connecter">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
           </button>
         </div>
       </div>
@@ -459,6 +483,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </button>
         </div>
+        <div id="guestBanner" class="guest-banner hidden"></div>
         <div class="action-buttons">
           <button class="action-btn violet" onclick="openPanel('image')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -488,10 +513,13 @@
         </div>
         <div class="messages" id="messagesContainer"></div>
         <div class="chat-input-area">
-          <input type="text" id="chatInput" placeholder="Écrivez votre message..." onkeydown="if(event.key==='Enter')sendMessage()" />
-          <button class="chat-send-btn" id="chatSendBtn" onclick="sendMessage()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
+          <div id="chatGuestBanner" class="chat-guest-banner hidden"></div>
+          <div style="display:flex;gap:12px;width:100%;">
+            <input type="text" id="chatInput" placeholder="Écrivez votre message..." onkeydown="if(event.key==='Enter')sendMessage()" />
+            <button class="chat-send-btn" id="chatSendBtn" onclick="sendMessage()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -507,6 +535,9 @@
     let loading = false;
     let currentPanel = null;
     let userEmail = null;
+    let guestQuestionCount = parseInt(localStorage.getItem('ws_guest_count') || '0', 10);
+    const MAX_GUEST_QUESTIONS = 3;
+    let loginReason = 'welcome';
 
     // API — try local first, then deployed backend
     const API_URLS = [
@@ -562,9 +593,68 @@
       renderMessages();
     }
 
+    function canSendChat() {
+      if (userEmail) return true;
+      return guestQuestionCount < MAX_GUEST_QUESTIONS;
+    }
+
+    function incrementGuestCount() {
+      guestQuestionCount++;
+      localStorage.setItem('ws_guest_count', String(guestQuestionCount));
+      updateGuestUI();
+    }
+
+    function showLimitModal() {
+      loginReason = 'limit';
+      updateLoginModalContent();
+      loginModal.classList.remove('hidden');
+      setTimeout(() => loginInputField.focus(), 300);
+    }
+
+    function handleContinueAsGuest() {
+      loginModal.classList.add('hidden');
+      loginReason = 'welcome';
+    }
+
+    function updateGuestUI() {
+      const guestBanner = document.getElementById('guestBanner');
+      const chatGuestBanner = document.getElementById('chatGuestBanner');
+      if (!userEmail) {
+        const remaining = MAX_GUEST_QUESTIONS - guestQuestionCount;
+        if (guestBanner) {
+          if (guestQuestionCount >= MAX_GUEST_QUESTIONS) {
+            guestBanner.innerHTML = '<span style="display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Limite atteinte — connectez-vous pour continuer</span>';
+            guestBanner.className = 'guest-banner limit';
+          } else {
+            guestBanner.innerHTML = '<span style="display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' + remaining + ' question' + (remaining > 1 ? 's' : '') + ' gratuite' + (remaining > 1 ? 's' : '') + ' restante' + (remaining > 1 ? 's' : '') + '</span>';
+            guestBanner.className = 'guest-banner';
+          }
+          guestBanner.classList.remove('hidden');
+        }
+        if (chatGuestBanner) {
+          if (guestQuestionCount >= MAX_GUEST_QUESTIONS) {
+            chatGuestBanner.innerHTML = '<span style="display:flex;align-items:center;gap:6px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Limite atteinte — connectez-vous</span>';
+            chatGuestBanner.className = 'chat-guest-banner limit';
+          } else {
+            chatGuestBanner.innerHTML = '<span style="display:flex;align-items:center;gap:6px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' + remaining + ' question' + (remaining > 1 ? 's' : '') + ' gratuite' + (remaining > 1 ? 's' : '') + ' restante' + (remaining > 1 ? 's' : '') + '</span>';
+            chatGuestBanner.className = 'chat-guest-banner';
+          }
+          chatGuestBanner.classList.remove('hidden');
+        }
+      } else {
+        if (guestBanner) guestBanner.classList.add('hidden');
+        if (chatGuestBanner) chatGuestBanner.classList.add('hidden');
+      }
+    }
+
     function sendMainInput() {
       const text = mainInput.value.trim();
       if (!text) return;
+      if (!canSendChat()) {
+        showLimitModal();
+        return;
+      }
+      if (!userEmail) incrementGuestCount();
       mainInput.value = '';
       mainSendBtn.classList.add('hidden');
       messages = [{ role: 'user', content: text }];
@@ -576,6 +666,11 @@
     function sendMessage() {
       const text = chatInput.value.trim();
       if (!text || loading) return;
+      if (!canSendChat()) {
+        showLimitModal();
+        return;
+      }
+      if (!userEmail) incrementGuestCount();
       chatInput.value = '';
       messages.push({ role: 'user', content: text });
       renderMessages();
@@ -734,13 +829,33 @@
 
     function checkAuth() {
       const email = localStorage.getItem('ws_user_email');
+      const savedCount = localStorage.getItem('ws_guest_count');
+      if (savedCount) guestQuestionCount = parseInt(savedCount, 10);
       if (email) {
         userEmail = email;
         updateUserUI();
         loginModal.classList.add('hidden');
       } else {
+        loginReason = 'welcome';
+        updateLoginModalContent();
         loginModal.classList.remove('hidden');
         setTimeout(() => loginInputField.focus(), 300);
+      }
+      updateGuestUI();
+    }
+
+    function updateLoginModalContent() {
+      const title = document.getElementById('loginTitle');
+      const subtitle = document.getElementById('loginSubtitle');
+      const guestBtn = document.getElementById('guestContinueBtn');
+      if (loginReason === 'limit') {
+        title.textContent = 'Limite atteinte';
+        subtitle.textContent = 'Vous avez utilisé vos 3 questions gratuites. Connectez-vous pour continuer à utiliser WS sans limite.';
+        if (guestBtn) guestBtn.style.display = 'none';
+      } else {
+        title.textContent = 'Bienvenue sur WS';
+        subtitle.textContent = 'Connectez-vous avec votre adresse email pour profiter de WS sans limite';
+        if (guestBtn) guestBtn.style.display = 'block';
       }
     }
 
@@ -752,33 +867,48 @@
         return;
       }
       localStorage.setItem('ws_user_email', email);
+      localStorage.removeItem('ws_guest_count');
+      guestQuestionCount = 0;
       userEmail = email;
       updateUserUI();
       loginModal.classList.add('hidden');
       loginInputField.value = '';
       loginErrorEl.classList.add('hidden');
+      updateGuestUI();
     }
 
     function handleLogout() {
       localStorage.removeItem('ws_user_email');
+      localStorage.removeItem('ws_guest_count');
+      guestQuestionCount = 0;
       userEmail = null;
       updateUserUI();
+      loginReason = 'welcome';
+      updateLoginModalContent();
       loginModal.classList.remove('hidden');
       setTimeout(() => loginInputField.focus(), 300);
+      updateGuestUI();
     }
 
     function updateUserUI() {
       const avatar = document.getElementById('userAvatar');
       const name = document.getElementById('userName');
       const emailEl = document.getElementById('userEmail');
+      const loginBtn = document.getElementById('loginBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
       if (userEmail) {
         avatar.textContent = userEmail.charAt(0).toUpperCase();
         name.textContent = userEmail.split('@')[0];
         emailEl.textContent = userEmail;
+        if (loginBtn) loginBtn.classList.add('hidden');
+        if (logoutBtn) logoutBtn.classList.remove('hidden');
       } else {
         avatar.textContent = '?';
-        name.textContent = 'Connexion...';
-        emailEl.textContent = '';
+        name.textContent = 'Invité';
+        const remaining = MAX_GUEST_QUESTIONS - guestQuestionCount;
+        emailEl.textContent = remaining + ' question' + (remaining > 1 ? 's' : '') + ' restante' + (remaining > 1 ? 's' : '');
+        if (loginBtn) loginBtn.classList.remove('hidden');
+        if (logoutBtn) logoutBtn.classList.add('hidden');
       }
     }
 
@@ -795,14 +925,15 @@
           <span style="color:black;font-weight:800;font-size:18px;">WS</span>
         </div>
       </div>
-      <h2 style="font-size:24px;font-weight:700;text-align:center;color:white;margin-bottom:8px;">Bienvenue sur WS</h2>
-      <p style="color:rgba(255,255,255,0.4);text-align:center;font-size:14px;margin-bottom:32px;">Connectez-vous avec votre adresse email pour commencer</p>
+      <h2 id="loginTitle" style="font-size:24px;font-weight:700;text-align:center;color:white;margin-bottom:8px;">Bienvenue sur WS</h2>
+      <p id="loginSubtitle" style="color:rgba(255,255,255,0.4);text-align:center;font-size:14px;margin-bottom:32px;">Connectez-vous avec votre adresse email pour profiter de WS sans limite</p>
       <div style="position:relative;margin-bottom:16px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
         <input type="email" id="loginEmailInput" placeholder="votre@email.com" onkeydown="if(event.key==='Enter')handleLogin()" style="width:100%;background:#1e1e32;border:1px solid rgba(255,255,255,0.10);border-radius:12px;padding:14px 16px 14px 44px;color:white;font-size:16px;font-family:inherit;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='rgba(0,35,149,0.4)'" onblur="this.style.borderColor='rgba(255,255,255,0.10)'" />
       </div>
       <p id="loginError" class="hidden" style="color:#f87171;font-size:14px;text-align:center;margin-bottom:12px;"></p>
       <button onclick="handleLogin()" style="width:100%;padding:14px;border-radius:12px;background:linear-gradient(to right,#002395,#ED2939);color:white;font-weight:600;font-size:16px;border:none;cursor:pointer;transition:all 0.2s;font-family:inherit;">Continuer</button>
+      <button id="guestContinueBtn" onclick="handleContinueAsGuest()" style="width:100%;padding:14px;border-radius:12px;background:#1e1e32;color:rgba(255,255,255,0.5);font-weight:500;font-size:14px;border:1px solid rgba(255,255,255,0.08);cursor:pointer;transition:all 0.2s;font-family:inherit;margin-top:12px;">Continuer sans compte <span style="color:rgba(255,255,255,0.3);">(3 questions gratuites)</span></button>
       <p style="color:rgba(255,255,255,0.2);font-size:12px;text-align:center;margin-top:24px;">En continuant, vous acceptez les conditions d'utilisation de WS.</p>
     </div>
   </div>

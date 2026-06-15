@@ -83,6 +83,10 @@ export default function Home() {
   const [loginInput, setLoginInput] = useState('')
   const [loginError, setLoginError] = useState('')
   const [showLogin, setShowLogin] = useState(false)
+  const [guestQuestionCount, setGuestQuestionCount] = useState(0)
+  const [loginReason, setLoginReason] = useState<'welcome' | 'limit'>('welcome')
+
+  const MAX_GUEST_QUESTIONS = 3
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
@@ -104,10 +108,13 @@ export default function Home() {
       loadConversations()
       // Check if user is already logged in
       const saved = localStorage.getItem('ws_user_email')
+      const savedCount = localStorage.getItem('ws_guest_count')
       if (saved) {
         setUserEmail(saved)
       } else {
+        setGuestQuestionCount(savedCount ? parseInt(savedCount, 10) : 0)
         setShowLogin(true)
+        setLoginReason('welcome')
       }
     }
   }, [mounted, loadConversations])
@@ -123,11 +130,39 @@ export default function Home() {
     setShowLogin(false)
     setLoginInput('')
     setLoginError('')
+    // Reset guest count on login
+    localStorage.removeItem('ws_guest_count')
+    setGuestQuestionCount(0)
+  }
+
+  const handleContinueAsGuest = () => {
+    setShowLogin(false)
+    setLoginReason('welcome')
   }
 
   const handleLogout = () => {
     localStorage.removeItem('ws_user_email')
     setUserEmail(null)
+    setGuestQuestionCount(0)
+    localStorage.removeItem('ws_guest_count')
+    setShowLogin(true)
+    setLoginReason('welcome')
+  }
+
+  const incrementGuestCount = () => {
+    const newCount = guestQuestionCount + 1
+    setGuestQuestionCount(newCount)
+    localStorage.setItem('ws_guest_count', String(newCount))
+    return newCount
+  }
+
+  const canSendChat = () => {
+    if (userEmail) return true
+    return guestQuestionCount < MAX_GUEST_QUESTIONS
+  }
+
+  const showLimitModal = () => {
+    setLoginReason('limit')
     setShowLogin(true)
   }
 
@@ -212,6 +247,13 @@ export default function Home() {
 
   const handleSendChat = async () => {
     if (!chatInput.trim()) return
+    if (!canSendChat()) {
+      showLimitModal()
+      return
+    }
+    if (!userEmail) {
+      incrementGuestCount()
+    }
     const userMsg: ChatMessage = { role: 'user', content: chatInput }
     const newMessages = [...chatMessages, userMsg]
     setChatMessages(newMessages)
@@ -292,6 +334,13 @@ export default function Home() {
 
   const handleMainInput = async () => {
     if (!inputValue.trim()) return
+    if (!canSendChat()) {
+      showLimitModal()
+      return
+    }
+    if (!userEmail) {
+      incrementGuestCount()
+    }
 
     // Create a new conversation
     let convId: string | null = null
@@ -458,19 +507,32 @@ export default function Home() {
         <div className="p-3 border-t border-white/[0.06]">
           <div className="flex items-center gap-3 px-2 py-2">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#002395] to-[#ED2939] flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-[#002395]/20">
-              {getUserInitial()}
+              {userEmail ? getUserInitial() : '?'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white/80 text-sm font-medium truncate">{getUserName()}</p>
-              <p className="text-white/25 text-xs truncate">{userEmail}</p>
+              <p className="text-white/80 text-sm font-medium truncate">{userEmail ? getUserName() : 'Invité'}</p>
+              <p className="text-white/25 text-xs truncate">
+                {userEmail || `${MAX_GUEST_QUESTIONS - guestQuestionCount} question${MAX_GUEST_QUESTIONS - guestQuestionCount > 1 ? 's' : ''} restante${MAX_GUEST_QUESTIONS - guestQuestionCount > 1 ? 's' : ''}`}
+              </p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="text-white/20 hover:text-red-400 transition-colors"
-              title="Se déconnecter"
-            >
-              <LogOut size={14} />
-            </button>
+            {userEmail && (
+              <button
+                onClick={handleLogout}
+                className="text-white/20 hover:text-red-400 transition-colors"
+                title="Se déconnecter"
+              >
+                <LogOut size={14} />
+              </button>
+            )}
+            {!userEmail && (
+              <button
+                onClick={() => { setLoginReason('welcome'); setShowLogin(true) }}
+                className="text-white/20 hover:text-emerald-400 transition-colors"
+                title="Se connecter"
+              >
+                <Mail size={14} />
+              </button>
+            )}
           </div>
           <button className="w-full mt-2 flex items-center justify-center gap-2 bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 rounded-xl px-3 py-2.5 text-white/60 hover:text-white transition-all text-sm border border-white/[0.08]">
             <Star size={14} className="text-amber-400" />
@@ -590,6 +652,34 @@ export default function Home() {
                   </div>
                 </div>
               </motion.div>
+
+              {/* Guest counter banner */}
+              {!userEmail && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.6 }}
+                  className="flex items-center gap-2 mt-2"
+                >
+                  <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border backdrop-blur-sm text-sm ${
+                    guestQuestionCount >= MAX_GUEST_QUESTIONS
+                      ? 'bg-red-500/10 border-red-500/20 text-red-300'
+                      : 'bg-amber-500/10 border-amber-500/15 text-amber-300/80'
+                  }`}>
+                    {guestQuestionCount >= MAX_GUEST_QUESTIONS ? (
+                      <>
+                        <Mail size={14} />
+                        <span>Limite atteinte — connectez-vous pour continuer</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={14} />
+                        <span>{MAX_GUEST_QUESTIONS - guestQuestionCount} question{MAX_GUEST_QUESTIONS - guestQuestionCount > 1 ? 's' : ''} gratuite{MAX_GUEST_QUESTIONS - guestQuestionCount > 1 ? 's' : ''} restante{MAX_GUEST_QUESTIONS - guestQuestionCount > 1 ? 's' : ''}</span>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              )}
 
               {/* Action Buttons */}
               <motion.div
@@ -788,7 +878,27 @@ export default function Home() {
                   </div>
 
                   {/* Chat input */}
-                  <div className="flex gap-3 pt-2">
+                  <div className="flex flex-col gap-2 pt-2">
+                    {!userEmail && (
+                      <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs ${
+                        guestQuestionCount >= MAX_GUEST_QUESTIONS
+                          ? 'bg-red-500/10 border-red-500/20 text-red-300'
+                          : 'bg-amber-500/10 border-amber-500/15 text-amber-300/80'
+                      }`}>
+                        {guestQuestionCount >= MAX_GUEST_QUESTIONS ? (
+                          <>
+                            <Mail size={12} />
+                            <span>Limite atteinte — connectez-vous pour continuer</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles size={12} />
+                            <span>{MAX_GUEST_QUESTIONS - guestQuestionCount} question{MAX_GUEST_QUESTIONS - guestQuestionCount > 1 ? 's' : ''} gratuite{MAX_GUEST_QUESTIONS - guestQuestionCount > 1 ? 's' : ''} restante{MAX_GUEST_QUESTIONS - guestQuestionCount > 1 ? 's' : ''}</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex gap-3">
                     <input
                       type="text"
                       value={chatInput}
@@ -806,6 +916,7 @@ export default function Home() {
                     >
                       <Send size={16} />
                     </motion.button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -945,8 +1056,14 @@ export default function Home() {
                   </div>
                 </div>
 
-                <h2 className="text-2xl font-bold text-center text-white mb-2">Bienvenue sur WS</h2>
-                <p className="text-white/40 text-center text-sm mb-8">Connectez-vous avec votre adresse email pour commencer</p>
+                <h2 className="text-2xl font-bold text-center text-white mb-2">
+                  {loginReason === 'limit' ? 'Limite atteinte' : 'Bienvenue sur WS'}
+                </h2>
+                <p className="text-white/40 text-center text-sm mb-8">
+                  {loginReason === 'limit'
+                    ? 'Vous avez utilisé vos 3 questions gratuites. Connectez-vous pour continuer à utiliser WS sans limite.'
+                    : 'Connectez-vous avec votre adresse email pour profiter de WS sans limite'}
+                </p>
 
                 <div className="space-y-4">
                   <div className="relative">
@@ -976,9 +1093,22 @@ export default function Home() {
                   </motion.button>
                 </div>
 
-                <p className="text-white/20 text-xs text-center mt-6">
-                  En continuant, vous acceptez les conditions d&apos;utilisation de WS.
-                </p>
+                <div className="mt-6 space-y-3">
+                  {loginReason !== 'limit' && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleContinueAsGuest}
+                      className="w-full py-3 rounded-xl bg-[#1e1e32] hover:bg-[#26264a] text-white/50 hover:text-white/70 font-medium text-sm transition-all border border-white/[0.08]"
+                    >
+                      Continuer sans compte
+                      <span className="text-white/30 ml-1">(3 questions gratuites)</span>
+                    </motion.button>
+                  )}
+                  <p className="text-white/20 text-xs text-center">
+                    En continuant, vous acceptez les conditions d&apos;utilisation de WS.
+                  </p>
+                </div>
               </div>
             </motion.div>
           </motion.div>
