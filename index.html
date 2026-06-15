@@ -504,8 +504,11 @@
     let loading = false;
     let currentPanel = null;
 
-    // API Base URL — change this to your deployed WS backend
-    const API = window.location.origin;
+    // API — try local first, then deployed backend
+    const API_URLS = [
+      window.location.origin,           // same origin (if deployed with backend)
+      'https://ws-ai.vercel.app',       // Vercel deployment (configure later)
+    ];
 
     const mainInput = document.getElementById('mainInput');
     const mainSendBtn = document.getElementById('mainSendBtn');
@@ -579,22 +582,33 @@
       loading = true;
       renderMessages();
 
-      try {
-        const res = await fetch(API + '/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: msgs }),
-        });
-        const data = await res.json();
-        if (data.content) {
-          messages.push({ role: 'assistant', content: data.content });
-        } else if (data.error) {
-          messages.push({ role: 'assistant', content: 'Erreur : ' + data.error });
+      const body = JSON.stringify({ messages: msgs });
+
+      // Try each API URL until one works
+      for (const baseUrl of API_URLS) {
+        try {
+          const res = await fetch(baseUrl + '/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: body,
+          });
+          const data = await res.json();
+          if (data.content) {
+            messages.push({ role: 'assistant', content: data.content });
+          } else if (data.error) {
+            messages.push({ role: 'assistant', content: 'Erreur : ' + data.error });
+          }
+          loading = false;
+          renderMessages();
+          scrollToBottom();
+          return; // success
+        } catch {
+          continue; // try next URL
         }
-      } catch {
-        messages.push({ role: 'assistant', content: 'Erreur réseau — vérifiez que le serveur est lancé.' });
       }
 
+      // All APIs failed — show helpful message
+      messages.push({ role: 'assistant', content: "Je suis actuellement hors ligne. Pour activer l'IA, le serveur backend doit être lancé.\n\n🔧 Pour lancer le serveur :\n1. Clonez le repo : git clone https://github.com/WSCompany-web/ws-ai.git\n2. Installez : bun install\n3. Lancez : bun run dev\n\nLe site fonctionnera alors sur localhost:3000" });
       loading = false;
       renderMessages();
       scrollToBottom();
