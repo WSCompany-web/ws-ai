@@ -1,0 +1,778 @@
+     1→     1→'use client'
+     2→     2→
+     3→     3→import { useState, useSyncExternalStore, useRef, useCallback } from 'react'
+     4→     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→     5→import {
+     6→     6→  ImageIcon,
+     7→     7→  PenLine,
+     8→     8→  Search,
+     9→     9→  Send,
+    10→    10→  X,
+    11→    11→  Mic,
+    12→    12→  Volume2,
+    13→    13→  Sparkles,
+    14→    14→  ArrowRight,
+    15→    15→  Loader2,
+    16→    16→  Library,
+    17→    17→  FolderKanban,
+    18→    18→  AppWindowMac,
+    19→    19→  Code2,
+    20→    20→  Plus,
+    21→    21→  Settings,
+    22→    22→  Star,
+    23→    23→  ChevronRight,
+    24→    24→} from 'lucide-react'
+    25→    25→
+    26→    26→function useMounted() {
+    27→    27→  return useSyncExternalStore(
+    28→    28→    () => () => {},
+    29→    29→    () => true,
+    30→    30→    () => false
+    31→    31→  )
+    32→    32→}
+    33→    33→
+    34→    34→type ActivePanel = null | 'image' | 'write' | 'search'
+    35→    35→
+    36→    36→interface ChatMessage {
+    37→    37→  role: 'user' | 'assistant'
+    38→    38→  content: string
+    39→    39→}
+    40→    40→
+    41→    41→interface SearchResult {
+    42→    42→  title: string
+    43→    43→  url: string
+    44→    44→  snippet: string
+    45→    45→}
+    46→    46→
+    47→    47→export default function Home() {
+    48→    48→  const mounted = useMounted()
+    49→    49→  const [inputValue, setInputValue] = useState('')
+    50→    50→  const [activePanel, setActivePanel] = useState<ActivePanel>(null)
+    51→    51→  const [sidebarOpen, setSidebarOpen] = useState(false)
+    52→    52→
+    53→    53→  // Image generation state
+    54→    54→  const [imagePrompt, setImagePrompt] = useState('')
+    55→    55→  const [generatedImage, setGeneratedImage] = useState<string | null>(null)
+    56→    56→  const [imageLoading, setImageLoading] = useState(false)
+    57→    57→  const [imageError, setImageError] = useState('')
+    58→    58→
+    59→    59→  // Chat / writing state
+    60→    60→  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+    61→    61→  const [chatInput, setChatInput] = useState('')
+    62→    62→  const [chatLoading, setChatLoading] = useState(false)
+    63→    63→  const chatEndRef = useRef<HTMLDivElement>(null)
+    64→    64→
+    65→    65→  // Search state
+    66→    66→  const [searchQuery, setSearchQuery] = useState('')
+    67→    67→  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+    68→    68→  const [searchLoading, setSearchLoading] = useState(false)
+    69→    69→  const [searchError, setSearchError] = useState('')
+    70→    70→
+    71→    71→  const scrollToBottom = useCallback(() => {
+    72→    72→    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+    73→    73→  }, [])
+    74→    74→
+    75→    75→  const handleGenerateImage = async () => {
+    76→    76→    if (!imagePrompt.trim()) return
+    77→    77→    setImageLoading(true)
+    78→    78→    setImageError('')
+    79→    79→    setGeneratedImage(null)
+    80→    80→    try {
+    81→    81→      const res = await fetch('/api/generate-image', {
+    82→    82→        method: 'POST',
+    83→    83→        headers: { 'Content-Type': 'application/json' },
+    84→    84→        body: JSON.stringify({ prompt: imagePrompt }),
+    85→    85→      })
+    86→    86→      const data = await res.json()
+    87→    87→      if (data.error) {
+    88→    88→        setImageError(data.error)
+    89→    89→      } else {
+    90→    90→        setGeneratedImage(data.image)
+    91→    91→      }
+    92→    92→    } catch {
+    93→    93→      setImageError('Erreur réseau')
+    94→    94→    } finally {
+    95→    95→      setImageLoading(false)
+    96→    96→    }
+    97→    97→  }
+    98→    98→
+    99→    99→  const handleSendChat = async () => {
+   100→   100→    if (!chatInput.trim()) return
+   101→   101→    const userMsg: ChatMessage = { role: 'user', content: chatInput }
+   102→   102→    const newMessages = [...chatMessages, userMsg]
+   103→   103→    setChatMessages(newMessages)
+   104→   104→    setChatInput('')
+   105→   105→    setChatLoading(true)
+   106→   106→    scrollToBottom()
+   107→   107→    try {
+   108→   108→      const res = await fetch('/api/chat', {
+   109→   109→        method: 'POST',
+   110→   110→        headers: { 'Content-Type': 'application/json' },
+   111→   111→        body: JSON.stringify({ messages: newMessages }),
+   112→   112→      })
+   113→   113→      const data = await res.json()
+   114→   114→      if (data.error) {
+   115→   115→        setChatMessages([...newMessages, { role: 'assistant', content: `Erreur : ${data.error}` }])
+   116→   116→      } else {
+   117→   117→        setChatMessages([...newMessages, { role: 'assistant', content: data.content }])
+   118→   118→      }
+   119→   119→    } catch {
+   120→   120→      setChatMessages([...newMessages, { role: 'assistant', content: 'Erreur réseau' }])
+   121→   121→    } finally {
+   122→   122→      setChatLoading(false)
+   123→   123→      scrollToBottom()
+   124→   124→    }
+   125→   125→  }
+   126→   126→
+   127→   127→  const handleSearch = async () => {
+   128→   128→    if (!searchQuery.trim()) return
+   129→   129→    setSearchLoading(true)
+   130→   130→    setSearchError('')
+   131→   131→    setSearchResults([])
+   132→   132→    try {
+   133→   133→      const res = await fetch('/api/search', {
+   134→   134→        method: 'POST',
+   135→   135→        headers: { 'Content-Type': 'application/json' },
+   136→   136→        body: JSON.stringify({ query: searchQuery }),
+   137→   137→      })
+   138→   138→      const data = await res.json()
+   139→   139→      if (data.error) {
+   140→   140→        setSearchError(data.error)
+   141→   141→      } else {
+   142→   142→        const results = data.results?.results || data.results || []
+   143→   143→        setSearchResults(
+   144→   144→          Array.isArray(results)
+   145→   145→            ? results.slice(0, 8).map((r: Record<string, string>) => ({
+   146→   146→                title: r.title || r.name || '',
+   147→   147→                url: r.url || r.link || '',
+   148→   148→                snippet: r.snippet || r.content || r.description || '',
+   149→   149→              }))
+   150→   150→            : []
+   151→   151→        )
+   152→   152→      }
+   153→   153→    } catch {
+   154→   154→      setSearchError('Erreur réseau')
+   155→   155→    } finally {
+   156→   156→      setSearchLoading(false)
+   157→   157→    }
+   158→   158→  }
+   159→   159→
+   160→   160→  const handleMainInput = () => {
+   161→   161→    if (inputValue.trim()) {
+   162→   162→      setActivePanel('write')
+   163→   163→      setChatMessages([{ role: 'user', content: inputValue }])
+   164→   164→      setChatInput('')
+   165→   165→      setInputValue('')
+   166→   166→      setChatLoading(true)
+   167→   167→      fetch('/api/chat', {
+   168→   168→        method: 'POST',
+   169→   169→        headers: { 'Content-Type': 'application/json' },
+   170→   170→        body: JSON.stringify({ messages: [{ role: 'user', content: inputValue }] }),
+   171→   171→      })
+   172→   172→        .then((r) => r.json())
+   173→   173→        .then((data) => {
+   174→   174→          if (data.content) {
+   175→   175→            setChatMessages([
+   176→   176→              { role: 'user', content: inputValue },
+   177→   177→              { role: 'assistant', content: data.content },
+   178→   178→            ])
+   179→   179→          }
+   180→   180→        })
+   181→   181→        .catch(() => {})
+   182→   182→        .finally(() => {
+   183→   183→          setChatLoading(false)
+   184→   184→          scrollToBottom()
+   185→   185→        })
+   186→   186→    }
+   187→   187→  }
+   188→   188→
+   189→   189→  const actions = [
+   190→   190→    { icon: ImageIcon, label: 'Créer une image', panel: 'image' as const, color: 'from-violet-500/20 to-fuchsia-500/20', hoverBorder: 'hover:border-violet-500/40', iconColor: 'text-violet-400' },
+   191→   191→    { icon: PenLine, label: 'Écrire ou modifier', panel: 'write' as const, color: 'from-emerald-500/20 to-teal-500/20', hoverBorder: 'hover:border-emerald-500/40', iconColor: 'text-emerald-400' },
+   192→   192→    { icon: Search, label: 'Faire une recherche', panel: 'search' as const, color: 'from-amber-500/20 to-orange-500/20', hoverBorder: 'hover:border-amber-500/40', iconColor: 'text-amber-400' },
+   193→   193→  ]
+   194→   194→
+   195→   195→  const recentChats = [
+   196→   196→    'Traduction Français-Anglais',
+   197→   197→    "Trouver l'endroit exact",
+   198→   198→    'Demande portrait iris HD',
+   199→   199→    'Analyse de données Q4',
+   200→   200→    'Génération de code React',
+   201→   201→  ]
+   202→   202→
+   203→   203→  const navItems = [
+   204→   204→    { icon: Library, label: 'Bibliothèque' },
+   205→   205→    { icon: FolderKanban, label: 'Projets' },
+   206→   206→    { icon: AppWindowMac, label: 'Applications' },
+   207→   207→    { icon: Code2, label: 'Codex' },
+   208→   208→    { icon: Plus, label: 'Plus' },
+   209→   209→  ]
+   210→   210→
+   211→   211→  return (
+   212→   212→    <div className="min-h-screen flex bg-[#050510] text-white font-[var(--font-geist-sans)] overflow-hidden">
+   213→   213→      {/* ===== FRANCE-THEMED BACKGROUND ===== */}
+   214→   214→      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+   215→   215→        {/* AI-generated Paris background — cinematic Ken Burns slow zoom */}
+   216→   216→        <div
+   217→   217→          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-75 animate-[kenburns_60s_ease-in-out_infinite_alternate]"
+   218→   218→          style={{ backgroundImage: 'url(/france-bg.png)' }}
+   219→   219→        />
+   220→   220→
+   221→   221→        {/* Very subtle tricolor tint — barely there, just a whisper */}
+   222→   222→        <div className="absolute inset-0 flex">
+   223→   223→          <div className="w-1/3 h-full bg-[#002395]/8" />
+   224→   224→          <div className="w-1/3 h-full bg-white/[0.01]" />
+   225→   225→          <div className="w-1/3 h-full bg-[#ED2939]/7" />
+   226→   226→        </div>
+   227→   227→
+   228→   228→        {/* Faint tricolor diagonal glow */}
+   229→   229→        <div className="absolute inset-0 bg-gradient-to-br from-[#002395]/5 via-transparent to-[#ED2939]/5" />
+   230→   230→
+   231→   231→        {/* Floating bleu orb — very subtle */}
+   232→   232→        <div className="absolute -top-[10%] -left-[5%] w-[700px] h-[700px] rounded-full bg-gradient-to-br from-[#002395]/8 via-[#003399]/4 to-transparent animate-[float1_25s_ease-in-out_infinite] blur-3xl" />
+   233→   233→        {/* Floating rouge orb — very subtle */}
+   234→   234→        <div className="absolute -bottom-[10%] -right-[5%] w-[800px] h-[800px] rounded-full bg-gradient-to-tl from-[#ED2939]/7 via-[#C8102E]/3 to-transparent animate-[float2_30s_ease-in-out_infinite] blur-3xl" />
+   235→   235→        {/* Floating blanc orb — barely visible */}
+   236→   236→        <div className="absolute top-[20%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-white/[0.03] via-white/[0.01] to-transparent animate-[float3_20s_ease-in-out_infinite] blur-3xl" />
+   237→   237→
+   238→   238→        {/* Bleu accent spot — faint */}
+   239→   239→        <div className="absolute top-[15%] right-[15%] w-[300px] h-[300px] rounded-full bg-[#002395]/5 animate-[float4_18s_ease-in-out_infinite] blur-2xl" />
+   240→   240→        {/* Rouge accent spot — faint */}
+   241→   241→        <div className="absolute bottom-[10%] left-[15%] w-[350px] h-[350px] rounded-full bg-[#ED2939]/4 animate-[float5_22s_ease-in-out_infinite] blur-2xl" />
+   242→   242→        {/* White accent spot — faint */}
+   243→   243→        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-white/[0.015] animate-[float3_22s_ease-in-out_infinite] blur-2xl" />
+   244→   244→
+   245→   245→        {/* Hair-thin tricolor lines at edges — ultra subtle */}
+   246→   246→        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-[#002395] via-white to-[#ED2939] opacity-20" />
+   247→   247→        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-[#002395] via-white to-[#ED2939] opacity-20" />
+   248→   248→
+   249→   249→        {/* Light vignette — keeps depth without killing the image */}
+   250→   250→        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.15)_50%,rgba(0,0,0,0.45)_100%)]" />
+   251→   251→      </div>
+   252→   252→
+   253→   253→      {/* ===== SIDEBAR ===== */}
+   254→   254→      <aside
+   255→   255→        className={`fixed md:relative z-40 flex flex-col w-[260px] h-screen bg-[#0d0d1a]/90 backdrop-blur-xl border-r border-[#002395]/[0.08] transition-transform duration-300 ${
+   256→   256→          sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+   257→   257→        }`}
+   258→   258→      >
+   259→   259→        {/* Sidebar Header */}
+   260→   260→        <div className="flex items-center gap-3 px-4 py-4">
+   261→   261→          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center shadow-lg shadow-[#002395]/20">
+   262→   262→            <span className="text-black font-bold text-sm tracking-tight">WS</span>
+   263→   263→          </div>
+   264→   264→          <span className="text-white font-semibold text-base tracking-tight">WS</span>
+   265→   265→          <button
+   266→   266→            className="ml-auto md:hidden text-white/50 hover:text-white"
+   267→   267→            onClick={() => setSidebarOpen(false)}
+   268→   268→          >
+   269→   269→            <X size={18} />
+   270→   270→          </button>
+   271→   271→        </div>
+   272→   272→
+   273→   273→        {/* Search */}
+   274→   274→        <div className="px-3 mb-3">
+   275→   275→          <div className="flex items-center gap-2 bg-white/[0.04] hover:bg-white/[0.06] rounded-xl px-3 py-2.5 border border-white/[0.04] transition-colors cursor-text">
+   276→   276→            <Search size={14} className="text-white/30" />
+   277→   277→            <span className="text-white/25 text-sm">Rechercher</span>
+   278→   278→          </div>
+   279→   279→        </div>
+   280→   280→
+   281→   281→        {/* Nav Items */}
+   282→   282→        <nav className="px-2 mb-4">
+   283→   283→          {navItems.map((item, i) => (
+   284→   284→            <button
+   285→   285→              key={i}
+   286→   286→              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:bg-white/[0.05] hover:text-white/90 transition-all text-sm group"
+   287→   287→            >
+   288→   288→              <item.icon size={16} className="text-white/35 group-hover:text-white/60 transition-colors" />
+   289→   289→              {item.label}
+   290→   290→            </button>
+   291→   291→          ))}
+   292→   292→        </nav>
+   293→   293→
+   294→   294→        {/* Recent Chats */}
+   295→   295→        <div className="px-3 flex-1 overflow-y-auto">
+   296→   296→          <p className="text-white/30 text-xs font-medium uppercase tracking-widest mb-2 px-1">Récents</p>
+   297→   297→          <div className="space-y-0.5">
+   298→   298→            {recentChats.map((chat, i) => (
+   299→   299→              <button
+   300→   300→                key={i}
+   301→   301→                className="w-full text-left px-3 py-2 rounded-xl text-white/45 hover:bg-white/[0.05] hover:text-white/80 transition-all text-sm truncate flex items-center gap-2 group"
+   302→   302→              >
+   303→   303→                <ChevronRight size={12} className="text-white/20 group-hover:text-white/40 transition-colors flex-shrink-0" />
+   304→   304→                <span className="truncate">{chat}</span>
+   305→   305→              </button>
+   306→   306→            ))}
+   307→   307→          </div>
+   308→   308→        </div>
+   309→   309→
+   310→   310→        {/* Sidebar Footer */}
+   311→   311→        <div className="p-3 border-t border-white/[0.06]">
+   312→   312→          <div className="flex items-center gap-3 px-2 py-2">
+   313→   313→            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#002395] to-[#ED2939] flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-[#002395]/20">
+   314→   314→              Y
+   315→   315→            </div>
+   316→   316→            <div className="flex-1 min-w-0">
+   317→   317→              <p className="text-white/80 text-sm font-medium truncate">Yanis</p>
+   318→   318→              <p className="text-white/25 text-xs">Free</p>
+   319→   319→            </div>
+   320→   320→          </div>
+   321→   321→          <button className="w-full mt-2 flex items-center justify-center gap-2 bg-white/[0.04] hover:bg-white/[0.08] rounded-xl px-3 py-2.5 text-white/60 hover:text-white transition-all text-sm border border-white/[0.04]">
+   322→   322→            <Star size={14} className="text-amber-400" />
+   323→   323→            Mettre à niveau
+   324→   324→          </button>
+   325→   325→        </div>
+   326→   326→      </aside>
+   327→   327→
+   328→   328→      {/* Sidebar overlay on mobile */}
+   329→   329→      {sidebarOpen && (
+   330→   330→        <div
+   331→   331→          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+   332→   332→          onClick={() => setSidebarOpen(false)}
+   333→   333→        />
+   334→   334→      )}
+   335→   335→
+   336→   336→      {/* ===== MAIN CONTENT ===== */}
+   337→   337→      <main className="flex-1 flex flex-col min-h-screen relative">
+   338→   338→        {/* Top Bar */}
+   339→   339→        <header className="flex items-center justify-between px-4 py-3 md:px-6 relative z-10">
+   340→   340→          <button
+   341→   341→            className="md:hidden text-white/50 hover:text-white transition-colors"
+   342→   342→            onClick={() => setSidebarOpen(true)}
+   343→   343→          >
+   344→   344→            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+   345→   345→              <line x1="3" y1="6" x2="21" y2="6" />
+   346→   346→              <line x1="3" y1="12" x2="21" y2="12" />
+   347→   347→              <line x1="3" y1="18" x2="21" y2="18" />
+   348→   348→            </svg>
+   349→   349→          </button>
+   350→   350→          <div className="md:hidden flex items-center gap-2">
+   351→   351→            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center">
+   352→   352→              <span className="text-black font-bold text-[10px]">WS</span>
+   353→   353→            </div>
+   354→   354→          </div>
+   355→   355→          <div className="flex items-center gap-2 ml-auto">
+   356→   356→            <button className="flex items-center gap-1.5 bg-white/[0.04] hover:bg-white/[0.08] rounded-full px-3 py-1.5 text-white/60 hover:text-white transition-all text-sm border border-white/[0.04]">
+   357→   357→              <Star size={12} className="text-amber-400" />
+   358→   358→              Mettre à niveau
+   359→   359→            </button>
+   360→   360→            <button className="w-8 h-8 rounded-full bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-all">
+   361→   361→              <Settings size={16} className="text-white/40" />
+   362→   362→            </button>
+   363→   363→          </div>
+   364→   364→        </header>
+   365→   365→
+   366→   366→        {/* Center / Home View */}
+   367→   367→        <AnimatePresence mode="wait">
+   368→   368→          {activePanel === null ? (
+   369→   369→            <motion.div
+   370→   370→              key="home"
+   371→   371→              initial={{ opacity: 0 }}
+   372→   372→              animate={{ opacity: 1 }}
+   373→   373→              exit={{ opacity: 0, y: -20 }}
+   374→   374→              transition={{ duration: 0.3 }}
+   375→   375→              className="flex-1 flex flex-col items-center justify-center px-4 -mt-16 relative z-10"
+   376→   376→            >
+   377→   377→              {/* WS Logo - Large with glow */}
+   378→   378→              <motion.div
+   379→   379→                initial={{ opacity: 0, scale: 0.8 }}
+   380→   380→                animate={{ opacity: 1, scale: 1 }}
+   381→   381→                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+   382→   382→                className="relative mb-6"
+   383→   383→              >
+   384→   384→                {/* Animated glow ring — French tricolor */}
+   385→   385→                <div className="absolute inset-0 -m-8 rounded-full bg-gradient-to-br from-[#002395]/15 via-white/5 to-[#ED2939]/15 blur-2xl animate-pulse" />
+   386→   386→                <h1 className="relative text-8xl md:text-[10rem] font-bold tracking-tighter bg-gradient-to-b from-white via-white/90 to-white/50 bg-clip-text text-transparent">
+   387→   387→                  WS
+   388→   388→                </h1>
+   389→   389→              </motion.div>
+   390→   390→
+   391→   391→              {/* Tagline */}
+   392→   392→              <motion.p
+   393→   393→                initial={{ opacity: 0, y: 10 }}
+   394→   394→                animate={{ opacity: 1, y: 0 }}
+   395→   395→                transition={{ delay: 0.2, duration: 0.6 }}
+   396→   396→                className="text-white/40 text-lg md:text-xl mb-10 flex items-center gap-2"
+   397→   397→              >
+   398→   398→                <Sparkles size={16} className="text-amber-400/60" />
+   399→   399→                Toujours prêt à répondre.
+   400→   400→              </motion.p>
+   401→   401→
+   402→   402→              {/* Search Bar */}
+   403→   403→              <motion.div
+   404→   404→                initial={{ opacity: 0, y: 20 }}
+   405→   405→                animate={{ opacity: 1, y: 0 }}
+   406→   406→                transition={{ delay: 0.3, duration: 0.6 }}
+   407→   407→                className="w-full max-w-2xl"
+   408→   408→              >
+   409→   409→                <div className="relative flex items-center bg-white/[0.04] rounded-2xl px-5 py-4 border border-white/[0.06] hover:border-[#002395]/30 focus-within:border-[#002395]/40 focus-within:bg-white/[0.06] transition-all shadow-2xl shadow-black/20">
+   410→   410→                  <Sparkles size={18} className="text-white/20 mr-3 flex-shrink-0" />
+   411→   411→                  <input
+   412→   412→                    type="text"
+   413→   413→                    value={inputValue}
+   414→   414→                    onChange={(e) => setInputValue(e.target.value)}
+   415→   415→                    onKeyDown={(e) => e.key === 'Enter' && handleMainInput()}
+   416→   416→                    placeholder="Poser une question à WS..."
+   417→   417→                    className="flex-1 bg-transparent text-white placeholder:text-white/25 outline-none text-base"
+   418→   418→                  />
+   419→   419→                  <div className="flex items-center gap-2 ml-3">
+   420→   420→                    <button className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-all">
+   421→   421→                      <Mic size={16} className="text-white/40" />
+   422→   422→                    </button>
+   423→   423→                    <button className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-all">
+   424→   424→                      <Volume2 size={16} className="text-white/40" />
+   425→   425→                    </button>
+   426→   426→                    {inputValue.trim() && (
+   427→   427→                      <motion.button
+   428→   428→                        initial={{ scale: 0 }}
+   429→   429→                        animate={{ scale: 1 }}
+   430→   430→                        onClick={handleMainInput}
+   431→   431→                        className="w-8 h-8 rounded-xl bg-[#002395]/80 hover:bg-[#002395] flex items-center justify-center transition-all"
+   432→   432→                      >
+   433→   433→                        <ArrowRight size={16} className="text-white" />
+   434→   434→                      </motion.button>
+   435→   435→                    )}
+   436→   436→                  </div>
+   437→   437→                </div>
+   438→   438→              </motion.div>
+   439→   439→
+   440→   440→              {/* Action Buttons */}
+   441→   441→              <motion.div
+   442→   442→                initial={{ opacity: 0, y: 20 }}
+   443→   443→                animate={{ opacity: 1, y: 0 }}
+   444→   444→                transition={{ delay: 0.5, duration: 0.6 }}
+   445→   445→                className="flex flex-wrap items-center justify-center gap-3 mt-6"
+   446→   446→              >
+   447→   447→                {actions.map((action, i) => (
+   448→   448→                  <motion.button
+   449→   449→                    key={i}
+   450→   450→                    whileHover={{ scale: 1.03, y: -2 }}
+   451→   451→                    whileTap={{ scale: 0.97 }}
+   452→   452→                    onClick={() => setActivePanel(action.panel)}
+   453→   453→                    className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl border border-white/[0.06] ${action.hoverBorder} bg-gradient-to-r ${action.color} hover:bg-opacity-150 text-white/70 hover:text-white transition-all duration-300 backdrop-blur-sm`}
+   454→   454→                  >
+   455→   455→                    <action.icon size={16} className={action.iconColor} />
+   456→   456→                    <span className="text-sm font-medium">{action.label}</span>
+   457→   457→                  </motion.button>
+   458→   458→                ))}
+   459→   459→              </motion.div>
+   460→   460→            </motion.div>
+   461→   461→          ) : (
+   462→   462→            /* ===== ACTIVE PANEL ===== */
+   463→   463→            <motion.div
+   464→   464→              key={activePanel}
+   465→   465→              initial={{ opacity: 0, y: 30 }}
+   466→   466→              animate={{ opacity: 1, y: 0 }}
+   467→   467→              exit={{ opacity: 0, y: 30 }}
+   468→   468→              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+   469→   469→              className="flex-1 flex flex-col relative z-10 px-4 md:px-8 py-4 max-w-4xl mx-auto w-full bg-[#0a0a14]/85 backdrop-blur-2xl rounded-2xl border border-white/[0.06] shadow-2xl shadow-black/40"
+   470→   470→            >
+   471→   471→              {/* Panel header */}
+   472→   472→              <div className="flex items-center justify-between mb-6">
+   473→   473→                <div className="flex items-center gap-3">
+   474→   474→                  <button
+   475→   475→                    onClick={() => setActivePanel(null)}
+   476→   476→                    className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-all"
+   477→   477→                  >
+   478→   478→                    <X size={16} className="text-white/50" />
+   479→   479→                  </button>
+   480→   480→                  <h2 className="text-lg font-semibold text-white/80">
+   481→   481→                    {activePanel === 'image' && 'Créer une image'}
+   482→   482→                    {activePanel === 'write' && 'Écrire ou modifier'}
+   483→   483→                    {activePanel === 'search' && 'Recherche web'}
+   484→   484→                  </h2>
+   485→   485→                </div>
+   486→   486→                <div
+   487→   487→                  className={`w-2 h-2 rounded-full ${
+   488→   488→                    activePanel === 'image'
+   489→   489→                      ? 'bg-violet-400'
+   490→   490→                      : activePanel === 'write'
+   491→   491→                        ? 'bg-emerald-400'
+   492→   492→                        : 'bg-amber-400'
+   493→   493→                  }`}
+   494→   494→                />
+   495→   495→              </div>
+   496→   496→
+   497→   497→              {/* ===== IMAGE PANEL ===== */}
+   498→   498→              {activePanel === 'image' && (
+   499→   499→                <div className="flex-1 flex flex-col gap-6">
+   500→   500→                  <div className="flex gap-3">
+   501→   501→                    <div className="flex-1 relative">
+   502→   502→                      <input
+   503→   503→                        type="text"
+   504→   504→                        value={imagePrompt}
+   505→   505→                        onChange={(e) => setImagePrompt(e.target.value)}
+   506→   506→                        onKeyDown={(e) => e.key === 'Enter' && handleGenerateImage()}
+   507→   507→                        placeholder="Décrivez l'image que vous souhaitez créer..."
+   508→   508→                        className="w-full bg-[#1a1a2a] rounded-xl px-4 py-3 text-white placeholder:text-white/35 outline-none border border-white/[0.08] focus:border-violet-500/40 transition-all"
+   509→   509→                      />
+   510→   510→                    </div>
+   511→   511→                    <motion.button
+   512→   512→                      whileHover={{ scale: 1.03 }}
+   513→   513→                      whileTap={{ scale: 0.97 }}
+   514→   514→                      onClick={handleGenerateImage}
+   515→   515→                      disabled={imageLoading || !imagePrompt.trim()}
+   516→   516→                      className="px-5 py-3 rounded-xl bg-violet-500/80 hover:bg-violet-500 disabled:opacity-40 disabled:hover:bg-violet-500/80 text-white font-medium text-sm flex items-center gap-2 transition-all"
+   517→   517→                    >
+   518→   518→                      {imageLoading ? (
+   519→   519→                        <Loader2 size={16} className="animate-spin" />
+   520→   520→                      ) : (
+   521→   521→                        <ImageIcon size={16} />
+   522→   522→                      )}
+   523→   523→                      Générer
+   524→   524→                    </motion.button>
+   525→   525→                  </div>
+   526→   526→
+   527→   527→                  {imageError && (
+   528→   528→                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-300 text-sm">
+   529→   529→                      {imageError}
+   530→   530→                    </div>
+   531→   531→                  )}
+   532→   532→
+   533→   533→                  {imageLoading && (
+   534→   534→                    <div className="flex-1 flex items-center justify-center">
+   535→   535→                      <div className="flex flex-col items-center gap-4">
+   536→   536→                        <div className="relative">
+   537→   537→                          <div className="w-16 h-16 rounded-full border-2 border-violet-500/20 border-t-violet-500 animate-spin" />
+   538→   538→                          <ImageIcon size={20} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-violet-400" />
+   539→   539→                        </div>
+   540→   540→                        <p className="text-white/40 text-sm">Création en cours...</p>
+   541→   541→                      </div>
+   542→   542→                    </div>
+   543→   543→                  )}
+   544→   544→
+   545→   545→                  {generatedImage && !imageLoading && (
+   546→   546→                    <motion.div
+   547→   547→                      initial={{ opacity: 0, scale: 0.95 }}
+   548→   548→                      animate={{ opacity: 1, scale: 1 }}
+   549→   549→                      className="flex-1 flex flex-col items-center gap-4"
+   550→   550→                    >
+   551→   551→                      <div className="relative rounded-2xl overflow-hidden border border-white/[0.06] shadow-2xl shadow-violet-500/10 max-w-lg">
+   552→   552→                        <img
+   553→   553→                          src={generatedImage}
+   554→   554→                          alt={imagePrompt}
+   555→   555→                          className="w-full h-auto"
+   556→   556→                        />
+   557→   557→                      </div>
+   558→   558→                      <p className="text-white/30 text-sm text-center max-w-md">
+   559→   559→                        &ldquo;{imagePrompt}&rdquo;
+   560→   560→                      </p>
+   561→   561→                    </motion.div>
+   562→   562→                  )}
+   563→   563→
+   564→   564→                  {!generatedImage && !imageLoading && !imageError && (
+   565→   565→                    <div className="flex-1 flex items-center justify-center">
+   566→   566→                      <div className="text-center">
+   567→   567→                        <div className="w-20 h-20 rounded-2xl bg-violet-500/10 border border-violet-500/10 flex items-center justify-center mx-auto mb-4">
+   568→   568→                          <ImageIcon size={32} className="text-violet-400/50" />
+   569→   569→                        </div>
+   570→   570→                        <p className="text-white/30 text-sm">Décrivez votre image et cliquez Générer</p>
+   571→   571→                      </div>
+   572→   572→                    </div>
+   573→   573→                  )}
+   574→   574→                </div>
+   575→   575→              )}
+   576→   576→
+   577→   577→              {/* ===== WRITE / CHAT PANEL ===== */}
+   578→   578→              {activePanel === 'write' && (
+   579→   579→                <div className="flex-1 flex flex-col gap-4 min-h-0">
+   580→   580→                  {/* Messages */}
+   581→   581→                  <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+   582→   582→                    {chatMessages.length === 0 && (
+   583→   583→                      <div className="flex-1 flex items-center justify-center h-full min-h-[200px]">
+   584→   584→                        <div className="text-center">
+   585→   585→                          <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 border border-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+   586→   586→                            <PenLine size={32} className="text-emerald-400/50" />
+   587→   587→                          </div>
+   588→   588→                          <p className="text-white/30 text-sm">Posez une question ou demandez à WS d&apos;écrire quelque chose</p>
+   589→   589→                        </div>
+   590→   590→                      </div>
+   591→   591→                    )}
+   592→   592→                    {chatMessages.map((msg, i) => (
+   593→   593→                      <motion.div
+   594→   594→                        key={i}
+   595→   595→                        initial={{ opacity: 0, y: 10 }}
+   596→   596→                        animate={{ opacity: 1, y: 0 }}
+   597→   597→                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+   598→   598→                      >
+   599→   599→                        <div
+   600→   600→                          className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+   601→   601→                            msg.role === 'user'
+   602→   602→                              ? 'bg-emerald-500/25 border border-emerald-500/15 text-white/95'
+   603→   603→                              : 'bg-[#1a1a2a] border border-white/[0.08] text-white/90'
+   604→   604→                          }`}
+   605→   605→                        >
+   606→   606→                          <div className="whitespace-pre-wrap">{msg.content}</div>
+   607→   607→                        </div>
+   608→   608→                      </motion.div>
+   609→   609→                    ))}
+   610→   610→                    {chatLoading && (
+   611→   611→                      <div className="flex justify-start">
+   612→   612→                        <div className="bg-[#1a1a2a] border border-white/[0.08] rounded-2xl px-4 py-3">
+   613→   613→                          <div className="flex items-center gap-1.5">
+   614→   614→                            <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+   615→   615→                            <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+   616→   616→                            <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+   617→   617→                          </div>
+   618→   618→                        </div>
+   619→   619→                      </div>
+   620→   620→                    )}
+   621→   621→                    <div ref={chatEndRef} />
+   622→   622→                  </div>
+   623→   623→
+   624→   624→                  {/* Chat input */}
+   625→   625→                  <div className="flex gap-3 pt-2">
+   626→   626→                    <input
+   627→   627→                      type="text"
+   628→   628→                      value={chatInput}
+   629→   629→                      onChange={(e) => setChatInput(e.target.value)}
+   630→   630→                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendChat()}
+   631→   631→                      placeholder="Écrivez votre message..."
+   632→   632→                      className="flex-1 bg-[#1a1a2a] rounded-xl px-4 py-3 text-white placeholder:text-white/35 outline-none border border-white/[0.08] focus:border-emerald-500/40 transition-all"
+   633→   633→                    />
+   634→   634→                    <motion.button
+   635→   635→                      whileHover={{ scale: 1.03 }}
+   636→   636→                      whileTap={{ scale: 0.97 }}
+   637→   637→                      onClick={handleSendChat}
+   638→   638→                      disabled={chatLoading || !chatInput.trim()}
+   639→   639→                      className="px-4 py-3 rounded-xl bg-emerald-500/80 hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-500/80 text-white transition-all"
+   640→   640→                    >
+   641→   641→                      <Send size={16} />
+   642→   642→                    </motion.button>
+   643→   643→                  </div>
+   644→   644→                </div>
+   645→   645→              )}
+   646→   646→
+   647→   647→              {/* ===== SEARCH PANEL ===== */}
+   648→   648→              {activePanel === 'search' && (
+   649→   649→                <div className="flex-1 flex flex-col gap-6">
+   650→   650→                  <div className="flex gap-3">
+   651→   651→                    <div className="flex-1 relative">
+   652→   652→                      <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/25" />
+   653→   653→                      <input
+   654→   654→                        type="text"
+   655→   655→                        value={searchQuery}
+   656→   656→                        onChange={(e) => setSearchQuery(e.target.value)}
+   657→   657→                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+   658→   658→                        placeholder="Rechercher sur le web..."
+   659→   659→                        className="w-full bg-[#1a1a2a] rounded-xl pl-11 pr-4 py-3 text-white placeholder:text-white/35 outline-none border border-white/[0.08] focus:border-amber-500/40 transition-all"
+   660→   660→                      />
+   661→   661→                    </div>
+   662→   662→                    <motion.button
+   663→   663→                      whileHover={{ scale: 1.03 }}
+   664→   664→                      whileTap={{ scale: 0.97 }}
+   665→   665→                      onClick={handleSearch}
+   666→   666→                      disabled={searchLoading || !searchQuery.trim()}
+   667→   667→                      className="px-5 py-3 rounded-xl bg-amber-500/80 hover:bg-amber-500 disabled:opacity-40 disabled:hover:bg-amber-500/80 text-white font-medium text-sm flex items-center gap-2 transition-all"
+   668→   668→                    >
+   669→   669→                      {searchLoading ? (
+   670→   670→                        <Loader2 size={16} className="animate-spin" />
+   671→   671→                      ) : (
+   672→   672→                        <Search size={16} />
+   673→   673→                      )}
+   674→   674→                      Chercher
+   675→   675→                    </motion.button>
+   676→   676→                  </div>
+   677→   677→
+   678→   678→                  {searchError && (
+   679→   679→                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-300 text-sm">
+   680→   680→                      {searchError}
+   681→   681→                    </div>
+   682→   682→                  )}
+   683→   683→
+   684→   684→                  {searchLoading && (
+   685→   685→                    <div className="flex items-center justify-center py-12">
+   686→   686→                      <div className="flex flex-col items-center gap-4">
+   687→   687→                        <div className="relative">
+   688→   688→                          <div className="w-14 h-14 rounded-full border-2 border-amber-500/20 border-t-amber-500 animate-spin" />
+   689→   689→                          <Search size={18} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-amber-400" />
+   690→   690→                        </div>
+   691→   691→                        <p className="text-white/40 text-sm">Recherche en cours...</p>
+   692→   692→                      </div>
+   693→   693→                    </div>
+   694→   694→                  )}
+   695→   695→
+   696→   696→                  {searchResults.length > 0 && !searchLoading && (
+   697→   697→                    <motion.div
+   698→   698→                      initial={{ opacity: 0 }}
+   699→   699→                      animate={{ opacity: 1 }}
+   700→   700→                      className="space-y-3 overflow-y-auto max-h-[60vh] custom-scrollbar"
+   701→   701→                    >
+   702→   702→                      <p className="text-white/30 text-xs uppercase tracking-widest font-medium">
+   703→   703→                        {searchResults.length} résultat{searchResults.length > 1 ? 's' : ''}
+   704→   704→                      </p>
+   705→   705→                      {searchResults.map((result, i) => (
+   706→   706→                        <motion.a
+   707→   707→                          key={i}
+   708→   708→                          href={result.url}
+   709→   709→                          target="_blank"
+   710→   710→                          rel="noopener noreferrer"
+   711→   711→                          initial={{ opacity: 0, y: 10 }}
+   712→   712→                          animate={{ opacity: 1, y: 0 }}
+   713→   713→                          transition={{ delay: i * 0.05 }}
+   714→   714→                          className="block bg-[#1a1a2a] hover:bg-[#22223a] border border-white/[0.06] hover:border-amber-500/20 rounded-xl p-4 transition-all group"
+   715→   715→                        >
+   716→   716→                          <div className="flex items-start gap-3">
+   717→   717→                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+   718→   718→                              <GlobeIcon className="text-amber-400/60" size={14} />
+   719→   719→                            </div>
+   720→   720→                            <div className="flex-1 min-w-0">
+   721→   721→                              <h3 className="text-white/80 text-sm font-medium group-hover:text-amber-300 transition-colors truncate">
+   722→   722→                                {result.title || 'Sans titre'}
+   723→   723→                              </h3>
+   724→   724→                              <p className="text-white/20 text-xs truncate mt-0.5">{result.url}</p>
+   725→   725→                              <p className="text-white/40 text-sm mt-1.5 line-clamp-2">{result.snippet}</p>
+   726→   726→                            </div>
+   727→   727→                            <ArrowRight size={14} className="text-white/10 group-hover:text-amber-400/50 transition-colors mt-1 flex-shrink-0" />
+   728→   728→                          </div>
+   729→   729→                        </motion.a>
+   730→   730→                      ))}
+   731→   731→                    </motion.div>
+   732→   732→                  )}
+   733→   733→
+   734→   734→                  {searchResults.length === 0 && !searchLoading && !searchError && (
+   735→   735→                    <div className="flex-1 flex items-center justify-center">
+   736→   736→                      <div className="text-center">
+   737→   737→                        <div className="w-20 h-20 rounded-2xl bg-amber-500/10 border border-amber-500/10 flex items-center justify-center mx-auto mb-4">
+   738→   738→                          <Search size={32} className="text-amber-400/50" />
+   739→   739→                        </div>
+   740→   740→                        <p className="text-white/30 text-sm">Tapez votre recherche et cliquez Chercher</p>
+   741→   741→                      </div>
+   742→   742→                    </div>
+   743→   743→                  )}
+   744→   744→                </div>
+   745→   745→              )}
+   746→   746→            </motion.div>
+   747→   747→          )}
+   748→   748→        </AnimatePresence>
+   749→   749→
+   750→   750→        {/* Footer */}
+   751→   751→        <footer className="mt-auto px-4 py-4 text-center relative z-10">
+   752→   752→          <p className="text-white/15 text-xs">
+   753→   753→            WS peut faire des erreurs. Envisagez de vérifier les informations importantes.
+   754→   754→          </p>
+   755→   755→        </footer>
+   756→   756→      </main>
+   757→   757→    </div>
+   758→   758→  )
+   759→   759→}
+   760→   760→
+   761→   761→function GlobeIcon({ className, size }: { className?: string; size?: number }) {
+   762→   762→  return (
+   763→   763→    <svg
+   764→   764→      width={size || 24}
+   765→   765→      height={size || 24}
+   766→   766→      viewBox="0 0 24 24"
+   767→   767→      fill="none"
+   768→   768→      stroke="currentColor"
+   769→   769→      strokeWidth="2"
+   770→   770→      className={className}
+   771→   771→    >
+   772→   772→      <circle cx="12" cy="12" r="10" />
+   773→   773→      <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+   774→   774→      <path d="M2 12h20" />
+   775→   775→    </svg>
+   776→   776→  )
+   777→   777→}
+   778→   778→

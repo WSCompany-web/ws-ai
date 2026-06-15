@@ -20,7 +20,6 @@ import {
   Plus,
   Settings,
   Star,
-  ChevronRight,
 } from 'lucide-react'
 
 function useMounted() {
@@ -192,14 +191,6 @@ export default function Home() {
     { icon: Search, label: 'Faire une recherche', panel: 'search' as const, color: 'from-amber-500/20 to-orange-500/20', hoverBorder: 'hover:border-amber-500/40', iconColor: 'text-amber-400' },
   ]
 
-  const recentChats = [
-    'Traduction Français-Anglais',
-    "Trouver l'endroit exact",
-    'Demande portrait iris HD',
-    'Analyse de données Q4',
-    'Génération de code React',
-  ]
-
   const navItems = [
     { icon: Library, label: 'Bibliothèque' },
     { icon: FolderKanban, label: 'Projets' },
@@ -252,7 +243,7 @@ export default function Home() {
 
       {/* ===== SIDEBAR ===== */}
       <aside
-        className={`fixed md:relative z-40 flex flex-col w-[260px] h-screen bg-[#0d0d1a]/90 backdrop-blur-xl border-r border-[#002395]/[0.08] transition-transform duration-300 ${
+        className={`fixed md:relative z-40 flex flex-col w-[260px] h-screen bg-[#0d0d1a]/95 backdrop-blur-xl border-r border-[#002395]/[0.08] transition-transform duration-300 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
@@ -272,7 +263,7 @@ export default function Home() {
 
         {/* Search */}
         <div className="px-3 mb-3">
-          <div className="flex items-center gap-2 bg-white/[0.04] hover:bg-white/[0.06] rounded-xl px-3 py-2.5 border border-white/[0.04] transition-colors cursor-text">
+          <div className="flex items-center gap-2 bg-[#1a1a2e]/90 hover:bg-[#1e1e38]/95 rounded-xl px-3 py-2.5 border border-white/[0.08] transition-colors cursor-text backdrop-blur-md">
             <Search size={14} className="text-white/30" />
             <span className="text-white/25 text-sm">Rechercher</span>
           </div>
@@ -283,29 +274,13 @@ export default function Home() {
           {navItems.map((item, i) => (
             <button
               key={i}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:bg-white/[0.05] hover:text-white/90 transition-all text-sm group"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:bg-[#1a1a2e]/70 hover:text-white/90 transition-all text-sm group"
             >
               <item.icon size={16} className="text-white/35 group-hover:text-white/60 transition-colors" />
               {item.label}
             </button>
           ))}
         </nav>
-
-        {/* Recent Chats */}
-        <div className="px-3 flex-1 overflow-y-auto">
-          <p className="text-white/30 text-xs font-medium uppercase tracking-widest mb-2 px-1">Récents</p>
-          <div className="space-y-0.5">
-            {recentChats.map((chat, i) => (
-              <button
-                key={i}
-                className="w-full text-left px-3 py-2 rounded-xl text-white/45 hover:bg-white/[0.05] hover:text-white/80 transition-all text-sm truncate flex items-center gap-2 group"
-              >
-                <ChevronRight size={12} className="text-white/20 group-hover:text-white/40 transition-colors flex-shrink-0" />
-                <span className="truncate">{chat}</span>
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Sidebar Footer */}
         <div className="p-3 border-t border-white/[0.06]">
@@ -318,7 +293,7 @@ export default function Home() {
               <p className="text-white/25 text-xs">Free</p>
             </div>
           </div>
-          <button className="w-full mt-2 flex items-center justify-center gap-2 bg-white/[0.04] hover:bg-white/[0.08] rounded-xl px-3 py-2.5 text-white/60 hover:text-white transition-all text-sm border border-white/[0.04]">
+          <button className="w-full mt-2 flex items-center justify-center gap-2 bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 rounded-xl px-3 py-2.5 text-white/60 hover:text-white transition-all text-sm border border-white/[0.08]">
             <Star size={14} className="text-amber-400" />
             Mettre à niveau
           </button>
@@ -353,11 +328,11 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            <button className="flex items-center gap-1.5 bg-white/[0.04] hover:bg-white/[0.08] rounded-full px-3 py-1.5 text-white/60 hover:text-white transition-all text-sm border border-white/[0.04]">
+            <button className="flex items-center gap-1.5 bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 rounded-full px-3 py-1.5 text-white/60 hover:text-white transition-all text-sm border border-white/[0.08]">
               <Star size={12} className="text-amber-400" />
               Mettre à niveau
             </button>
-            <button className="w-8 h-8 rounded-full bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-all">
+            <button className="w-8 h-8 rounded-full bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all">
               <Settings size={16} className="text-white/40" />
             </button>
           </div>
@@ -406,7 +381,7 @@ export default function Home() {
                 transition={{ delay: 0.3, duration: 0.6 }}
                 className="w-full max-w-2xl"
               >
-                <div className="relative flex items-center bg-white/[0.04] rounded-2xl px-5 py-4 border border-white/[0.06] hover:border-[#002395]/30 focus-within:border-[#002395]/40 focus-within:bg-white/[0.06] transition-all shadow-2xl shadow-black/20">
+                <div className="relative flex items-center bg-[#12122a]/95 backdrop-blur-xl rounded-2xl px-5 py-4 border border-white/[0.10] hover:border-[#002395]/30 focus-within:border-[#002395]/40 focus-within:bg-[#161630]/95 transition-all shadow-2xl shadow-black/30">
                   <Sparkles size={18} className="text-white/20 mr-3 flex-shrink-0" />
                   <input
                     type="text"
@@ -417,10 +392,10 @@ export default function Home() {
                     className="flex-1 bg-transparent text-white placeholder:text-white/25 outline-none text-base"
                   />
                   <div className="flex items-center gap-2 ml-3">
-                    <button className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-all">
+                    <button className="w-8 h-8 rounded-xl bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all">
                       <Mic size={16} className="text-white/40" />
                     </button>
-                    <button className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-all">
+                    <button className="w-8 h-8 rounded-xl bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all">
                       <Volume2 size={16} className="text-white/40" />
                     </button>
                     {inputValue.trim() && (
@@ -466,14 +441,14 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 30 }}
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="flex-1 flex flex-col relative z-10 px-4 md:px-8 py-4 max-w-4xl mx-auto w-full bg-[#0a0a14]/85 backdrop-blur-2xl rounded-2xl border border-white/[0.06] shadow-2xl shadow-black/40"
+              className="flex-1 flex flex-col relative z-10 px-4 md:px-8 py-4 max-w-4xl mx-auto w-full bg-[#0e0e1c]/95 backdrop-blur-2xl rounded-2xl border border-white/[0.08] shadow-2xl shadow-black/40"
             >
               {/* Panel header */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setActivePanel(null)}
-                    className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-all"
+                    className="w-8 h-8 rounded-xl bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all"
                   >
                     <X size={16} className="text-white/50" />
                   </button>
@@ -505,7 +480,7 @@ export default function Home() {
                         onChange={(e) => setImagePrompt(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleGenerateImage()}
                         placeholder="Décrivez l'image que vous souhaitez créer..."
-                        className="w-full bg-[#1a1a2a] rounded-xl px-4 py-3 text-white placeholder:text-white/35 outline-none border border-white/[0.08] focus:border-violet-500/40 transition-all"
+                        className="w-full bg-[#1e1e32] rounded-xl px-4 py-3 text-white placeholder:text-white/40 outline-none border border-white/[0.10] focus:border-violet-500/40 transition-all"
                       />
                     </div>
                     <motion.button
@@ -596,24 +571,36 @@ export default function Home() {
                         animate={{ opacity: 1, y: 0 }}
                         className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
-                        <div
-                          className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                            msg.role === 'user'
-                              ? 'bg-emerald-500/25 border border-emerald-500/15 text-white/95'
-                              : 'bg-[#1a1a2a] border border-white/[0.08] text-white/90'
-                          }`}
-                        >
-                          <div className="whitespace-pre-wrap">{msg.content}</div>
+                        <div className={`max-w-[85%] ${msg.role === 'assistant' ? 'flex gap-3' : ''}`}>
+                          {msg.role === 'assistant' && (
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg shadow-[#002395]/20">
+                              <span className="text-black font-bold text-[9px]">WS</span>
+                            </div>
+                          )}
+                          <div
+                            className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                              msg.role === 'user'
+                                ? 'bg-emerald-500/40 border border-emerald-500/20 text-white/95'
+                                : 'bg-[#1e1e32] border border-white/[0.10] text-white/90'
+                            }`}
+                          >
+                            <div className="whitespace-pre-wrap">{msg.content}</div>
+                          </div>
                         </div>
                       </motion.div>
                     ))}
                     {chatLoading && (
                       <div className="flex justify-start">
-                        <div className="bg-[#1a1a2a] border border-white/[0.08] rounded-2xl px-4 py-3">
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <div className="flex gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg shadow-[#002395]/20">
+                            <span className="text-black font-bold text-[9px]">WS</span>
+                          </div>
+                          <div className="bg-[#1e1e32] border border-white/[0.10] rounded-2xl px-4 py-3">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+                              <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+                              <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -629,7 +616,7 @@ export default function Home() {
                       onChange={(e) => setChatInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendChat()}
                       placeholder="Écrivez votre message..."
-                      className="flex-1 bg-[#1a1a2a] rounded-xl px-4 py-3 text-white placeholder:text-white/35 outline-none border border-white/[0.08] focus:border-emerald-500/40 transition-all"
+                      className="flex-1 bg-[#1e1e32] rounded-xl px-4 py-3 text-white placeholder:text-white/40 outline-none border border-white/[0.10] focus:border-emerald-500/40 transition-all"
                     />
                     <motion.button
                       whileHover={{ scale: 1.03 }}
@@ -656,7 +643,7 @@ export default function Home() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                         placeholder="Rechercher sur le web..."
-                        className="w-full bg-[#1a1a2a] rounded-xl pl-11 pr-4 py-3 text-white placeholder:text-white/35 outline-none border border-white/[0.08] focus:border-amber-500/40 transition-all"
+                        className="w-full bg-[#1e1e32] rounded-xl pl-11 pr-4 py-3 text-white placeholder:text-white/40 outline-none border border-white/[0.10] focus:border-amber-500/40 transition-all"
                       />
                     </div>
                     <motion.button
@@ -711,7 +698,7 @@ export default function Home() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: i * 0.05 }}
-                          className="block bg-[#1a1a2a] hover:bg-[#22223a] border border-white/[0.06] hover:border-amber-500/20 rounded-xl p-4 transition-all group"
+                          className="block bg-[#1e1e32] hover:bg-[#26264a] border border-white/[0.10] hover:border-amber-500/20 rounded-xl p-4 transition-all group"
                         >
                           <div className="flex items-start gap-3">
                             <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">

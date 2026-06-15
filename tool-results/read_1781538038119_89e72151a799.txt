@@ -1,0 +1,778 @@
+     1→'use client'
+     2→
+     3→import { useState, useSyncExternalStore, useRef, useCallback } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  ImageIcon,
+     7→  PenLine,
+     8→  Search,
+     9→  Send,
+    10→  X,
+    11→  Mic,
+    12→  Volume2,
+    13→  Sparkles,
+    14→  ArrowRight,
+    15→  Loader2,
+    16→  Library,
+    17→  FolderKanban,
+    18→  AppWindowMac,
+    19→  Code2,
+    20→  Plus,
+    21→  Settings,
+    22→  Star,
+    23→  ChevronRight,
+    24→} from 'lucide-react'
+    25→
+    26→function useMounted() {
+    27→  return useSyncExternalStore(
+    28→    () => () => {},
+    29→    () => true,
+    30→    () => false
+    31→  )
+    32→}
+    33→
+    34→type ActivePanel = null | 'image' | 'write' | 'search'
+    35→
+    36→interface ChatMessage {
+    37→  role: 'user' | 'assistant'
+    38→  content: string
+    39→}
+    40→
+    41→interface SearchResult {
+    42→  title: string
+    43→  url: string
+    44→  snippet: string
+    45→}
+    46→
+    47→export default function Home() {
+    48→  const mounted = useMounted()
+    49→  const [inputValue, setInputValue] = useState('')
+    50→  const [activePanel, setActivePanel] = useState<ActivePanel>(null)
+    51→  const [sidebarOpen, setSidebarOpen] = useState(false)
+    52→
+    53→  // Image generation state
+    54→  const [imagePrompt, setImagePrompt] = useState('')
+    55→  const [generatedImage, setGeneratedImage] = useState<string | null>(null)
+    56→  const [imageLoading, setImageLoading] = useState(false)
+    57→  const [imageError, setImageError] = useState('')
+    58→
+    59→  // Chat / writing state
+    60→  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+    61→  const [chatInput, setChatInput] = useState('')
+    62→  const [chatLoading, setChatLoading] = useState(false)
+    63→  const chatEndRef = useRef<HTMLDivElement>(null)
+    64→
+    65→  // Search state
+    66→  const [searchQuery, setSearchQuery] = useState('')
+    67→  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+    68→  const [searchLoading, setSearchLoading] = useState(false)
+    69→  const [searchError, setSearchError] = useState('')
+    70→
+    71→  const scrollToBottom = useCallback(() => {
+    72→    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+    73→  }, [])
+    74→
+    75→  const handleGenerateImage = async () => {
+    76→    if (!imagePrompt.trim()) return
+    77→    setImageLoading(true)
+    78→    setImageError('')
+    79→    setGeneratedImage(null)
+    80→    try {
+    81→      const res = await fetch('/api/generate-image', {
+    82→        method: 'POST',
+    83→        headers: { 'Content-Type': 'application/json' },
+    84→        body: JSON.stringify({ prompt: imagePrompt }),
+    85→      })
+    86→      const data = await res.json()
+    87→      if (data.error) {
+    88→        setImageError(data.error)
+    89→      } else {
+    90→        setGeneratedImage(data.image)
+    91→      }
+    92→    } catch {
+    93→      setImageError('Erreur réseau')
+    94→    } finally {
+    95→      setImageLoading(false)
+    96→    }
+    97→  }
+    98→
+    99→  const handleSendChat = async () => {
+   100→    if (!chatInput.trim()) return
+   101→    const userMsg: ChatMessage = { role: 'user', content: chatInput }
+   102→    const newMessages = [...chatMessages, userMsg]
+   103→    setChatMessages(newMessages)
+   104→    setChatInput('')
+   105→    setChatLoading(true)
+   106→    scrollToBottom()
+   107→    try {
+   108→      const res = await fetch('/api/chat', {
+   109→        method: 'POST',
+   110→        headers: { 'Content-Type': 'application/json' },
+   111→        body: JSON.stringify({ messages: newMessages }),
+   112→      })
+   113→      const data = await res.json()
+   114→      if (data.error) {
+   115→        setChatMessages([...newMessages, { role: 'assistant', content: `Erreur : ${data.error}` }])
+   116→      } else {
+   117→        setChatMessages([...newMessages, { role: 'assistant', content: data.content }])
+   118→      }
+   119→    } catch {
+   120→      setChatMessages([...newMessages, { role: 'assistant', content: 'Erreur réseau' }])
+   121→    } finally {
+   122→      setChatLoading(false)
+   123→      scrollToBottom()
+   124→    }
+   125→  }
+   126→
+   127→  const handleSearch = async () => {
+   128→    if (!searchQuery.trim()) return
+   129→    setSearchLoading(true)
+   130→    setSearchError('')
+   131→    setSearchResults([])
+   132→    try {
+   133→      const res = await fetch('/api/search', {
+   134→        method: 'POST',
+   135→        headers: { 'Content-Type': 'application/json' },
+   136→        body: JSON.stringify({ query: searchQuery }),
+   137→      })
+   138→      const data = await res.json()
+   139→      if (data.error) {
+   140→        setSearchError(data.error)
+   141→      } else {
+   142→        const results = data.results?.results || data.results || []
+   143→        setSearchResults(
+   144→          Array.isArray(results)
+   145→            ? results.slice(0, 8).map((r: Record<string, string>) => ({
+   146→                title: r.title || r.name || '',
+   147→                url: r.url || r.link || '',
+   148→                snippet: r.snippet || r.content || r.description || '',
+   149→              }))
+   150→            : []
+   151→        )
+   152→      }
+   153→    } catch {
+   154→      setSearchError('Erreur réseau')
+   155→    } finally {
+   156→      setSearchLoading(false)
+   157→    }
+   158→  }
+   159→
+   160→  const handleMainInput = () => {
+   161→    if (inputValue.trim()) {
+   162→      setActivePanel('write')
+   163→      setChatMessages([{ role: 'user', content: inputValue }])
+   164→      setChatInput('')
+   165→      setInputValue('')
+   166→      setChatLoading(true)
+   167→      fetch('/api/chat', {
+   168→        method: 'POST',
+   169→        headers: { 'Content-Type': 'application/json' },
+   170→        body: JSON.stringify({ messages: [{ role: 'user', content: inputValue }] }),
+   171→      })
+   172→        .then((r) => r.json())
+   173→        .then((data) => {
+   174→          if (data.content) {
+   175→            setChatMessages([
+   176→              { role: 'user', content: inputValue },
+   177→              { role: 'assistant', content: data.content },
+   178→            ])
+   179→          }
+   180→        })
+   181→        .catch(() => {})
+   182→        .finally(() => {
+   183→          setChatLoading(false)
+   184→          scrollToBottom()
+   185→        })
+   186→    }
+   187→  }
+   188→
+   189→  const actions = [
+   190→    { icon: ImageIcon, label: 'Créer une image', panel: 'image' as const, color: 'from-violet-500/20 to-fuchsia-500/20', hoverBorder: 'hover:border-violet-500/40', iconColor: 'text-violet-400' },
+   191→    { icon: PenLine, label: 'Écrire ou modifier', panel: 'write' as const, color: 'from-emerald-500/20 to-teal-500/20', hoverBorder: 'hover:border-emerald-500/40', iconColor: 'text-emerald-400' },
+   192→    { icon: Search, label: 'Faire une recherche', panel: 'search' as const, color: 'from-amber-500/20 to-orange-500/20', hoverBorder: 'hover:border-amber-500/40', iconColor: 'text-amber-400' },
+   193→  ]
+   194→
+   195→  const recentChats = [
+   196→    'Traduction Français-Anglais',
+   197→    "Trouver l'endroit exact",
+   198→    'Demande portrait iris HD',
+   199→    'Analyse de données Q4',
+   200→    'Génération de code React',
+   201→  ]
+   202→
+   203→  const navItems = [
+   204→    { icon: Library, label: 'Bibliothèque' },
+   205→    { icon: FolderKanban, label: 'Projets' },
+   206→    { icon: AppWindowMac, label: 'Applications' },
+   207→    { icon: Code2, label: 'Codex' },
+   208→    { icon: Plus, label: 'Plus' },
+   209→  ]
+   210→
+   211→  return (
+   212→    <div className="min-h-screen flex bg-[#050510] text-white font-[var(--font-geist-sans)] overflow-hidden">
+   213→      {/* ===== FRANCE-THEMED BACKGROUND ===== */}
+   214→      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+   215→        {/* AI-generated Paris background — cinematic Ken Burns slow zoom */}
+   216→        <div
+   217→          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-75 animate-[kenburns_60s_ease-in-out_infinite_alternate]"
+   218→          style={{ backgroundImage: 'url(/france-bg.png)' }}
+   219→        />
+   220→
+   221→        {/* Very subtle tricolor tint — barely there, just a whisper */}
+   222→        <div className="absolute inset-0 flex">
+   223→          <div className="w-1/3 h-full bg-[#002395]/8" />
+   224→          <div className="w-1/3 h-full bg-white/[0.01]" />
+   225→          <div className="w-1/3 h-full bg-[#ED2939]/7" />
+   226→        </div>
+   227→
+   228→        {/* Faint tricolor diagonal glow */}
+   229→        <div className="absolute inset-0 bg-gradient-to-br from-[#002395]/5 via-transparent to-[#ED2939]/5" />
+   230→
+   231→        {/* Floating bleu orb — very subtle */}
+   232→        <div className="absolute -top-[10%] -left-[5%] w-[700px] h-[700px] rounded-full bg-gradient-to-br from-[#002395]/8 via-[#003399]/4 to-transparent animate-[float1_25s_ease-in-out_infinite] blur-3xl" />
+   233→        {/* Floating rouge orb — very subtle */}
+   234→        <div className="absolute -bottom-[10%] -right-[5%] w-[800px] h-[800px] rounded-full bg-gradient-to-tl from-[#ED2939]/7 via-[#C8102E]/3 to-transparent animate-[float2_30s_ease-in-out_infinite] blur-3xl" />
+   235→        {/* Floating blanc orb — barely visible */}
+   236→        <div className="absolute top-[20%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-white/[0.03] via-white/[0.01] to-transparent animate-[float3_20s_ease-in-out_infinite] blur-3xl" />
+   237→
+   238→        {/* Bleu accent spot — faint */}
+   239→        <div className="absolute top-[15%] right-[15%] w-[300px] h-[300px] rounded-full bg-[#002395]/5 animate-[float4_18s_ease-in-out_infinite] blur-2xl" />
+   240→        {/* Rouge accent spot — faint */}
+   241→        <div className="absolute bottom-[10%] left-[15%] w-[350px] h-[350px] rounded-full bg-[#ED2939]/4 animate-[float5_22s_ease-in-out_infinite] blur-2xl" />
+   242→        {/* White accent spot — faint */}
+   243→        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-white/[0.015] animate-[float3_22s_ease-in-out_infinite] blur-2xl" />
+   244→
+   245→        {/* Hair-thin tricolor lines at edges — ultra subtle */}
+   246→        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-[#002395] via-white to-[#ED2939] opacity-20" />
+   247→        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-[#002395] via-white to-[#ED2939] opacity-20" />
+   248→
+   249→        {/* Light vignette — keeps depth without killing the image */}
+   250→        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.15)_50%,rgba(0,0,0,0.45)_100%)]" />
+   251→      </div>
+   252→
+   253→      {/* ===== SIDEBAR ===== */}
+   254→      <aside
+   255→        className={`fixed md:relative z-40 flex flex-col w-[260px] h-screen bg-[#0d0d1a]/95 backdrop-blur-xl border-r border-[#002395]/[0.08] transition-transform duration-300 ${
+   256→          sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+   257→        }`}
+   258→      >
+   259→        {/* Sidebar Header */}
+   260→        <div className="flex items-center gap-3 px-4 py-4">
+   261→          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center shadow-lg shadow-[#002395]/20">
+   262→            <span className="text-black font-bold text-sm tracking-tight">WS</span>
+   263→          </div>
+   264→          <span className="text-white font-semibold text-base tracking-tight">WS</span>
+   265→          <button
+   266→            className="ml-auto md:hidden text-white/50 hover:text-white"
+   267→            onClick={() => setSidebarOpen(false)}
+   268→          >
+   269→            <X size={18} />
+   270→          </button>
+   271→        </div>
+   272→
+   273→        {/* Search */}
+   274→        <div className="px-3 mb-3">
+   275→          <div className="flex items-center gap-2 bg-[#1a1a2e]/90 hover:bg-[#1e1e38]/95 rounded-xl px-3 py-2.5 border border-white/[0.08] transition-colors cursor-text backdrop-blur-md">
+   276→            <Search size={14} className="text-white/30" />
+   277→            <span className="text-white/25 text-sm">Rechercher</span>
+   278→          </div>
+   279→        </div>
+   280→
+   281→        {/* Nav Items */}
+   282→        <nav className="px-2 mb-4">
+   283→          {navItems.map((item, i) => (
+   284→            <button
+   285→              key={i}
+   286→              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:bg-[#1a1a2e]/70 hover:text-white/90 transition-all text-sm group"
+   287→            >
+   288→              <item.icon size={16} className="text-white/35 group-hover:text-white/60 transition-colors" />
+   289→              {item.label}
+   290→            </button>
+   291→          ))}
+   292→        </nav>
+   293→
+   294→        {/* Recent Chats */}
+   295→        <div className="px-3 flex-1 overflow-y-auto">
+   296→          <p className="text-white/30 text-xs font-medium uppercase tracking-widest mb-2 px-1">Récents</p>
+   297→          <div className="space-y-0.5">
+   298→            {recentChats.map((chat, i) => (
+   299→              <button
+   300→                key={i}
+   301→                className="w-full text-left px-3 py-2 rounded-xl text-white/45 hover:bg-[#1a1a2e]/70 hover:text-white/80 transition-all text-sm truncate flex items-center gap-2 group"
+   302→              >
+   303→                <ChevronRight size={12} className="text-white/20 group-hover:text-white/40 transition-colors flex-shrink-0" />
+   304→                <span className="truncate">{chat}</span>
+   305→              </button>
+   306→            ))}
+   307→          </div>
+   308→        </div>
+   309→
+   310→        {/* Sidebar Footer */}
+   311→        <div className="p-3 border-t border-white/[0.06]">
+   312→          <div className="flex items-center gap-3 px-2 py-2">
+   313→            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#002395] to-[#ED2939] flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-[#002395]/20">
+   314→              Y
+   315→            </div>
+   316→            <div className="flex-1 min-w-0">
+   317→              <p className="text-white/80 text-sm font-medium truncate">Yanis</p>
+   318→              <p className="text-white/25 text-xs">Free</p>
+   319→            </div>
+   320→          </div>
+   321→          <button className="w-full mt-2 flex items-center justify-center gap-2 bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 rounded-xl px-3 py-2.5 text-white/60 hover:text-white transition-all text-sm border border-white/[0.08]">
+   322→            <Star size={14} className="text-amber-400" />
+   323→            Mettre à niveau
+   324→          </button>
+   325→        </div>
+   326→      </aside>
+   327→
+   328→      {/* Sidebar overlay on mobile */}
+   329→      {sidebarOpen && (
+   330→        <div
+   331→          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+   332→          onClick={() => setSidebarOpen(false)}
+   333→        />
+   334→      )}
+   335→
+   336→      {/* ===== MAIN CONTENT ===== */}
+   337→      <main className="flex-1 flex flex-col min-h-screen relative">
+   338→        {/* Top Bar */}
+   339→        <header className="flex items-center justify-between px-4 py-3 md:px-6 relative z-10">
+   340→          <button
+   341→            className="md:hidden text-white/50 hover:text-white transition-colors"
+   342→            onClick={() => setSidebarOpen(true)}
+   343→          >
+   344→            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+   345→              <line x1="3" y1="6" x2="21" y2="6" />
+   346→              <line x1="3" y1="12" x2="21" y2="12" />
+   347→              <line x1="3" y1="18" x2="21" y2="18" />
+   348→            </svg>
+   349→          </button>
+   350→          <div className="md:hidden flex items-center gap-2">
+   351→            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center">
+   352→              <span className="text-black font-bold text-[10px]">WS</span>
+   353→            </div>
+   354→          </div>
+   355→          <div className="flex items-center gap-2 ml-auto">
+   356→            <button className="flex items-center gap-1.5 bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 rounded-full px-3 py-1.5 text-white/60 hover:text-white transition-all text-sm border border-white/[0.08]">
+   357→              <Star size={12} className="text-amber-400" />
+   358→              Mettre à niveau
+   359→            </button>
+   360→            <button className="w-8 h-8 rounded-full bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all">
+   361→              <Settings size={16} className="text-white/40" />
+   362→            </button>
+   363→          </div>
+   364→        </header>
+   365→
+   366→        {/* Center / Home View */}
+   367→        <AnimatePresence mode="wait">
+   368→          {activePanel === null ? (
+   369→            <motion.div
+   370→              key="home"
+   371→              initial={{ opacity: 0 }}
+   372→              animate={{ opacity: 1 }}
+   373→              exit={{ opacity: 0, y: -20 }}
+   374→              transition={{ duration: 0.3 }}
+   375→              className="flex-1 flex flex-col items-center justify-center px-4 -mt-16 relative z-10"
+   376→            >
+   377→              {/* WS Logo - Large with glow */}
+   378→              <motion.div
+   379→                initial={{ opacity: 0, scale: 0.8 }}
+   380→                animate={{ opacity: 1, scale: 1 }}
+   381→                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+   382→                className="relative mb-6"
+   383→              >
+   384→                {/* Animated glow ring — French tricolor */}
+   385→                <div className="absolute inset-0 -m-8 rounded-full bg-gradient-to-br from-[#002395]/15 via-white/5 to-[#ED2939]/15 blur-2xl animate-pulse" />
+   386→                <h1 className="relative text-8xl md:text-[10rem] font-bold tracking-tighter bg-gradient-to-b from-white via-white/90 to-white/50 bg-clip-text text-transparent">
+   387→                  WS
+   388→                </h1>
+   389→              </motion.div>
+   390→
+   391→              {/* Tagline */}
+   392→              <motion.p
+   393→                initial={{ opacity: 0, y: 10 }}
+   394→                animate={{ opacity: 1, y: 0 }}
+   395→                transition={{ delay: 0.2, duration: 0.6 }}
+   396→                className="text-white/40 text-lg md:text-xl mb-10 flex items-center gap-2"
+   397→              >
+   398→                <Sparkles size={16} className="text-amber-400/60" />
+   399→                Toujours prêt à répondre.
+   400→              </motion.p>
+   401→
+   402→              {/* Search Bar */}
+   403→              <motion.div
+   404→                initial={{ opacity: 0, y: 20 }}
+   405→                animate={{ opacity: 1, y: 0 }}
+   406→                transition={{ delay: 0.3, duration: 0.6 }}
+   407→                className="w-full max-w-2xl"
+   408→              >
+   409→                <div className="relative flex items-center bg-[#12122a]/95 backdrop-blur-xl rounded-2xl px-5 py-4 border border-white/[0.10] hover:border-[#002395]/30 focus-within:border-[#002395]/40 focus-within:bg-[#161630]/95 transition-all shadow-2xl shadow-black/30">
+   410→                  <Sparkles size={18} className="text-white/20 mr-3 flex-shrink-0" />
+   411→                  <input
+   412→                    type="text"
+   413→                    value={inputValue}
+   414→                    onChange={(e) => setInputValue(e.target.value)}
+   415→                    onKeyDown={(e) => e.key === 'Enter' && handleMainInput()}
+   416→                    placeholder="Poser une question à WS..."
+   417→                    className="flex-1 bg-transparent text-white placeholder:text-white/25 outline-none text-base"
+   418→                  />
+   419→                  <div className="flex items-center gap-2 ml-3">
+   420→                    <button className="w-8 h-8 rounded-xl bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all">
+   421→                      <Mic size={16} className="text-white/40" />
+   422→                    </button>
+   423→                    <button className="w-8 h-8 rounded-xl bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all">
+   424→                      <Volume2 size={16} className="text-white/40" />
+   425→                    </button>
+   426→                    {inputValue.trim() && (
+   427→                      <motion.button
+   428→                        initial={{ scale: 0 }}
+   429→                        animate={{ scale: 1 }}
+   430→                        onClick={handleMainInput}
+   431→                        className="w-8 h-8 rounded-xl bg-[#002395]/80 hover:bg-[#002395] flex items-center justify-center transition-all"
+   432→                      >
+   433→                        <ArrowRight size={16} className="text-white" />
+   434→                      </motion.button>
+   435→                    )}
+   436→                  </div>
+   437→                </div>
+   438→              </motion.div>
+   439→
+   440→              {/* Action Buttons */}
+   441→              <motion.div
+   442→                initial={{ opacity: 0, y: 20 }}
+   443→                animate={{ opacity: 1, y: 0 }}
+   444→                transition={{ delay: 0.5, duration: 0.6 }}
+   445→                className="flex flex-wrap items-center justify-center gap-3 mt-6"
+   446→              >
+   447→                {actions.map((action, i) => (
+   448→                  <motion.button
+   449→                    key={i}
+   450→                    whileHover={{ scale: 1.03, y: -2 }}
+   451→                    whileTap={{ scale: 0.97 }}
+   452→                    onClick={() => setActivePanel(action.panel)}
+   453→                    className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl border border-white/[0.06] ${action.hoverBorder} bg-gradient-to-r ${action.color} hover:bg-opacity-150 text-white/70 hover:text-white transition-all duration-300 backdrop-blur-sm`}
+   454→                  >
+   455→                    <action.icon size={16} className={action.iconColor} />
+   456→                    <span className="text-sm font-medium">{action.label}</span>
+   457→                  </motion.button>
+   458→                ))}
+   459→              </motion.div>
+   460→            </motion.div>
+   461→          ) : (
+   462→            /* ===== ACTIVE PANEL ===== */
+   463→            <motion.div
+   464→              key={activePanel}
+   465→              initial={{ opacity: 0, y: 30 }}
+   466→              animate={{ opacity: 1, y: 0 }}
+   467→              exit={{ opacity: 0, y: 30 }}
+   468→              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+   469→              className="flex-1 flex flex-col relative z-10 px-4 md:px-8 py-4 max-w-4xl mx-auto w-full bg-[#0e0e1c]/95 backdrop-blur-2xl rounded-2xl border border-white/[0.08] shadow-2xl shadow-black/40"
+   470→            >
+   471→              {/* Panel header */}
+   472→              <div className="flex items-center justify-between mb-6">
+   473→                <div className="flex items-center gap-3">
+   474→                  <button
+   475→                    onClick={() => setActivePanel(null)}
+   476→                    className="w-8 h-8 rounded-xl bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all"
+   477→                  >
+   478→                    <X size={16} className="text-white/50" />
+   479→                  </button>
+   480→                  <h2 className="text-lg font-semibold text-white/80">
+   481→                    {activePanel === 'image' && 'Créer une image'}
+   482→                    {activePanel === 'write' && 'Écrire ou modifier'}
+   483→                    {activePanel === 'search' && 'Recherche web'}
+   484→                  </h2>
+   485→                </div>
+   486→                <div
+   487→                  className={`w-2 h-2 rounded-full ${
+   488→                    activePanel === 'image'
+   489→                      ? 'bg-violet-400'
+   490→                      : activePanel === 'write'
+   491→                        ? 'bg-emerald-400'
+   492→                        : 'bg-amber-400'
+   493→                  }`}
+   494→                />
+   495→              </div>
+   496→
+   497→              {/* ===== IMAGE PANEL ===== */}
+   498→              {activePanel === 'image' && (
+   499→                <div className="flex-1 flex flex-col gap-6">
+   500→                  <div className="flex gap-3">
+   501→                    <div className="flex-1 relative">
+   502→                      <input
+   503→                        type="text"
+   504→                        value={imagePrompt}
+   505→                        onChange={(e) => setImagePrompt(e.target.value)}
+   506→                        onKeyDown={(e) => e.key === 'Enter' && handleGenerateImage()}
+   507→                        placeholder="Décrivez l'image que vous souhaitez créer..."
+   508→                        className="w-full bg-[#1e1e32] rounded-xl px-4 py-3 text-white placeholder:text-white/40 outline-none border border-white/[0.10] focus:border-violet-500/40 transition-all"
+   509→                      />
+   510→                    </div>
+   511→                    <motion.button
+   512→                      whileHover={{ scale: 1.03 }}
+   513→                      whileTap={{ scale: 0.97 }}
+   514→                      onClick={handleGenerateImage}
+   515→                      disabled={imageLoading || !imagePrompt.trim()}
+   516→                      className="px-5 py-3 rounded-xl bg-violet-500/80 hover:bg-violet-500 disabled:opacity-40 disabled:hover:bg-violet-500/80 text-white font-medium text-sm flex items-center gap-2 transition-all"
+   517→                    >
+   518→                      {imageLoading ? (
+   519→                        <Loader2 size={16} className="animate-spin" />
+   520→                      ) : (
+   521→                        <ImageIcon size={16} />
+   522→                      )}
+   523→                      Générer
+   524→                    </motion.button>
+   525→                  </div>
+   526→
+   527→                  {imageError && (
+   528→                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-300 text-sm">
+   529→                      {imageError}
+   530→                    </div>
+   531→                  )}
+   532→
+   533→                  {imageLoading && (
+   534→                    <div className="flex-1 flex items-center justify-center">
+   535→                      <div className="flex flex-col items-center gap-4">
+   536→                        <div className="relative">
+   537→                          <div className="w-16 h-16 rounded-full border-2 border-violet-500/20 border-t-violet-500 animate-spin" />
+   538→                          <ImageIcon size={20} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-violet-400" />
+   539→                        </div>
+   540→                        <p className="text-white/40 text-sm">Création en cours...</p>
+   541→                      </div>
+   542→                    </div>
+   543→                  )}
+   544→
+   545→                  {generatedImage && !imageLoading && (
+   546→                    <motion.div
+   547→                      initial={{ opacity: 0, scale: 0.95 }}
+   548→                      animate={{ opacity: 1, scale: 1 }}
+   549→                      className="flex-1 flex flex-col items-center gap-4"
+   550→                    >
+   551→                      <div className="relative rounded-2xl overflow-hidden border border-white/[0.06] shadow-2xl shadow-violet-500/10 max-w-lg">
+   552→                        <img
+   553→                          src={generatedImage}
+   554→                          alt={imagePrompt}
+   555→                          className="w-full h-auto"
+   556→                        />
+   557→                      </div>
+   558→                      <p className="text-white/30 text-sm text-center max-w-md">
+   559→                        &ldquo;{imagePrompt}&rdquo;
+   560→                      </p>
+   561→                    </motion.div>
+   562→                  )}
+   563→
+   564→                  {!generatedImage && !imageLoading && !imageError && (
+   565→                    <div className="flex-1 flex items-center justify-center">
+   566→                      <div className="text-center">
+   567→                        <div className="w-20 h-20 rounded-2xl bg-violet-500/10 border border-violet-500/10 flex items-center justify-center mx-auto mb-4">
+   568→                          <ImageIcon size={32} className="text-violet-400/50" />
+   569→                        </div>
+   570→                        <p className="text-white/30 text-sm">Décrivez votre image et cliquez Générer</p>
+   571→                      </div>
+   572→                    </div>
+   573→                  )}
+   574→                </div>
+   575→              )}
+   576→
+   577→              {/* ===== WRITE / CHAT PANEL ===== */}
+   578→              {activePanel === 'write' && (
+   579→                <div className="flex-1 flex flex-col gap-4 min-h-0">
+   580→                  {/* Messages */}
+   581→                  <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+   582→                    {chatMessages.length === 0 && (
+   583→                      <div className="flex-1 flex items-center justify-center h-full min-h-[200px]">
+   584→                        <div className="text-center">
+   585→                          <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 border border-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+   586→                            <PenLine size={32} className="text-emerald-400/50" />
+   587→                          </div>
+   588→                          <p className="text-white/30 text-sm">Posez une question ou demandez à WS d&apos;écrire quelque chose</p>
+   589→                        </div>
+   590→                      </div>
+   591→                    )}
+   592→                    {chatMessages.map((msg, i) => (
+   593→                      <motion.div
+   594→                        key={i}
+   595→                        initial={{ opacity: 0, y: 10 }}
+   596→                        animate={{ opacity: 1, y: 0 }}
+   597→                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+   598→                      >
+   599→                        <div
+   600→                          className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+   601→                            msg.role === 'user'
+   602→                              ? 'bg-emerald-500/40 border border-emerald-500/20 text-white/95'
+   603→                              : 'bg-[#1e1e32] border border-white/[0.10] text-white/90'
+   604→                          }`}
+   605→                        >
+   606→                          <div className="whitespace-pre-wrap">{msg.content}</div>
+   607→                        </div>
+   608→                      </motion.div>
+   609→                    ))}
+   610→                    {chatLoading && (
+   611→                      <div className="flex justify-start">
+   612→                        <div className="bg-[#1e1e32] border border-white/[0.10] rounded-2xl px-4 py-3">
+   613→                          <div className="flex items-center gap-1.5">
+   614→                            <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+   615→                            <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+   616→                            <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+   617→                          </div>
+   618→                        </div>
+   619→                      </div>
+   620→                    )}
+   621→                    <div ref={chatEndRef} />
+   622→                  </div>
+   623→
+   624→                  {/* Chat input */}
+   625→                  <div className="flex gap-3 pt-2">
+   626→                    <input
+   627→                      type="text"
+   628→                      value={chatInput}
+   629→                      onChange={(e) => setChatInput(e.target.value)}
+   630→                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendChat()}
+   631→                      placeholder="Écrivez votre message..."
+   632→                      className="flex-1 bg-[#1e1e32] rounded-xl px-4 py-3 text-white placeholder:text-white/40 outline-none border border-white/[0.10] focus:border-emerald-500/40 transition-all"
+   633→                    />
+   634→                    <motion.button
+   635→                      whileHover={{ scale: 1.03 }}
+   636→                      whileTap={{ scale: 0.97 }}
+   637→                      onClick={handleSendChat}
+   638→                      disabled={chatLoading || !chatInput.trim()}
+   639→                      className="px-4 py-3 rounded-xl bg-emerald-500/80 hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-500/80 text-white transition-all"
+   640→                    >
+   641→                      <Send size={16} />
+   642→                    </motion.button>
+   643→                  </div>
+   644→                </div>
+   645→              )}
+   646→
+   647→              {/* ===== SEARCH PANEL ===== */}
+   648→              {activePanel === 'search' && (
+   649→                <div className="flex-1 flex flex-col gap-6">
+   650→                  <div className="flex gap-3">
+   651→                    <div className="flex-1 relative">
+   652→                      <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/25" />
+   653→                      <input
+   654→                        type="text"
+   655→                        value={searchQuery}
+   656→                        onChange={(e) => setSearchQuery(e.target.value)}
+   657→                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+   658→                        placeholder="Rechercher sur le web..."
+   659→                        className="w-full bg-[#1e1e32] rounded-xl pl-11 pr-4 py-3 text-white placeholder:text-white/40 outline-none border border-white/[0.10] focus:border-amber-500/40 transition-all"
+   660→                      />
+   661→                    </div>
+   662→                    <motion.button
+   663→                      whileHover={{ scale: 1.03 }}
+   664→                      whileTap={{ scale: 0.97 }}
+   665→                      onClick={handleSearch}
+   666→                      disabled={searchLoading || !searchQuery.trim()}
+   667→                      className="px-5 py-3 rounded-xl bg-amber-500/80 hover:bg-amber-500 disabled:opacity-40 disabled:hover:bg-amber-500/80 text-white font-medium text-sm flex items-center gap-2 transition-all"
+   668→                    >
+   669→                      {searchLoading ? (
+   670→                        <Loader2 size={16} className="animate-spin" />
+   671→                      ) : (
+   672→                        <Search size={16} />
+   673→                      )}
+   674→                      Chercher
+   675→                    </motion.button>
+   676→                  </div>
+   677→
+   678→                  {searchError && (
+   679→                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-300 text-sm">
+   680→                      {searchError}
+   681→                    </div>
+   682→                  )}
+   683→
+   684→                  {searchLoading && (
+   685→                    <div className="flex items-center justify-center py-12">
+   686→                      <div className="flex flex-col items-center gap-4">
+   687→                        <div className="relative">
+   688→                          <div className="w-14 h-14 rounded-full border-2 border-amber-500/20 border-t-amber-500 animate-spin" />
+   689→                          <Search size={18} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-amber-400" />
+   690→                        </div>
+   691→                        <p className="text-white/40 text-sm">Recherche en cours...</p>
+   692→                      </div>
+   693→                    </div>
+   694→                  )}
+   695→
+   696→                  {searchResults.length > 0 && !searchLoading && (
+   697→                    <motion.div
+   698→                      initial={{ opacity: 0 }}
+   699→                      animate={{ opacity: 1 }}
+   700→                      className="space-y-3 overflow-y-auto max-h-[60vh] custom-scrollbar"
+   701→                    >
+   702→                      <p className="text-white/30 text-xs uppercase tracking-widest font-medium">
+   703→                        {searchResults.length} résultat{searchResults.length > 1 ? 's' : ''}
+   704→                      </p>
+   705→                      {searchResults.map((result, i) => (
+   706→                        <motion.a
+   707→                          key={i}
+   708→                          href={result.url}
+   709→                          target="_blank"
+   710→                          rel="noopener noreferrer"
+   711→                          initial={{ opacity: 0, y: 10 }}
+   712→                          animate={{ opacity: 1, y: 0 }}
+   713→                          transition={{ delay: i * 0.05 }}
+   714→                          className="block bg-[#1e1e32] hover:bg-[#26264a] border border-white/[0.10] hover:border-amber-500/20 rounded-xl p-4 transition-all group"
+   715→                        >
+   716→                          <div className="flex items-start gap-3">
+   717→                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+   718→                              <GlobeIcon className="text-amber-400/60" size={14} />
+   719→                            </div>
+   720→                            <div className="flex-1 min-w-0">
+   721→                              <h3 className="text-white/80 text-sm font-medium group-hover:text-amber-300 transition-colors truncate">
+   722→                                {result.title || 'Sans titre'}
+   723→                              </h3>
+   724→                              <p className="text-white/20 text-xs truncate mt-0.5">{result.url}</p>
+   725→                              <p className="text-white/40 text-sm mt-1.5 line-clamp-2">{result.snippet}</p>
+   726→                            </div>
+   727→                            <ArrowRight size={14} className="text-white/10 group-hover:text-amber-400/50 transition-colors mt-1 flex-shrink-0" />
+   728→                          </div>
+   729→                        </motion.a>
+   730→                      ))}
+   731→                    </motion.div>
+   732→                  )}
+   733→
+   734→                  {searchResults.length === 0 && !searchLoading && !searchError && (
+   735→                    <div className="flex-1 flex items-center justify-center">
+   736→                      <div className="text-center">
+   737→                        <div className="w-20 h-20 rounded-2xl bg-amber-500/10 border border-amber-500/10 flex items-center justify-center mx-auto mb-4">
+   738→                          <Search size={32} className="text-amber-400/50" />
+   739→                        </div>
+   740→                        <p className="text-white/30 text-sm">Tapez votre recherche et cliquez Chercher</p>
+   741→                      </div>
+   742→                    </div>
+   743→                  )}
+   744→                </div>
+   745→              )}
+   746→            </motion.div>
+   747→          )}
+   748→        </AnimatePresence>
+   749→
+   750→        {/* Footer */}
+   751→        <footer className="mt-auto px-4 py-4 text-center relative z-10">
+   752→          <p className="text-white/15 text-xs">
+   753→            WS peut faire des erreurs. Envisagez de vérifier les informations importantes.
+   754→          </p>
+   755→        </footer>
+   756→      </main>
+   757→    </div>
+   758→  )
+   759→}
+   760→
+   761→function GlobeIcon({ className, size }: { className?: string; size?: number }) {
+   762→  return (
+   763→    <svg
+   764→      width={size || 24}
+   765→      height={size || 24}
+   766→      viewBox="0 0 24 24"
+   767→      fill="none"
+   768→      stroke="currentColor"
+   769→      strokeWidth="2"
+   770→      className={className}
+   771→    >
+   772→      <circle cx="12" cy="12" r="10" />
+   773→      <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+   774→      <path d="M2 12h20" />
+   775→    </svg>
+   776→  )
+   777→}
+   778→
