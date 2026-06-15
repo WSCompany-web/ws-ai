@@ -18,6 +18,8 @@ import {
   Star,
   MessageSquare,
   Trash2,
+  Mail,
+  LogOut,
 } from 'lucide-react'
 
 function useMounted() {
@@ -76,6 +78,12 @@ export default function Home() {
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchError, setSearchError] = useState('')
 
+  // Auth state
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [loginInput, setLoginInput] = useState('')
+  const [loginError, setLoginError] = useState('')
+  const [showLogin, setShowLogin] = useState(false)
+
   const scrollToBottom = useCallback(() => {
     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
   }, [])
@@ -94,8 +102,44 @@ export default function Home() {
   useEffect(() => {
     if (mounted) {
       loadConversations()
+      // Check if user is already logged in
+      const saved = localStorage.getItem('ws_user_email')
+      if (saved) {
+        setUserEmail(saved)
+      } else {
+        setShowLogin(true)
+      }
     }
   }, [mounted, loadConversations])
+
+  const handleLogin = () => {
+    const email = loginInput.trim().toLowerCase()
+    if (!email || !email.includes('@') || !email.includes('.')) {
+      setLoginError('Adresse email invalide')
+      return
+    }
+    localStorage.setItem('ws_user_email', email)
+    setUserEmail(email)
+    setShowLogin(false)
+    setLoginInput('')
+    setLoginError('')
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('ws_user_email')
+    setUserEmail(null)
+    setShowLogin(true)
+  }
+
+  const getUserInitial = () => {
+    if (!userEmail) return '?'
+    return userEmail.charAt(0).toUpperCase()
+  }
+
+  const getUserName = () => {
+    if (!userEmail) return ''
+    return userEmail.split('@')[0]
+  }
 
   const handleNewConversation = async () => {
     try {
@@ -414,12 +458,19 @@ export default function Home() {
         <div className="p-3 border-t border-white/[0.06]">
           <div className="flex items-center gap-3 px-2 py-2">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#002395] to-[#ED2939] flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-[#002395]/20">
-              Y
+              {getUserInitial()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white/80 text-sm font-medium truncate">Yanis</p>
-              <p className="text-white/25 text-xs">Free</p>
+              <p className="text-white/80 text-sm font-medium truncate">{getUserName()}</p>
+              <p className="text-white/25 text-xs truncate">{userEmail}</p>
             </div>
+            <button
+              onClick={handleLogout}
+              className="text-white/20 hover:text-red-400 transition-colors"
+              title="Se déconnecter"
+            >
+              <LogOut size={14} />
+            </button>
           </div>
           <button className="w-full mt-2 flex items-center justify-center gap-2 bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 rounded-xl px-3 py-2.5 text-white/60 hover:text-white transition-all text-sm border border-white/[0.08]">
             <Star size={14} className="text-amber-400" />
@@ -869,6 +920,70 @@ export default function Home() {
           </p>
         </footer>
       </main>
+
+      {/* ===== LOGIN MODAL ===== */}
+      <AnimatePresence>
+        {showLogin && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full max-w-md mx-4"
+            >
+              <div className="bg-[#0e0e1c]/98 backdrop-blur-2xl rounded-3xl border border-white/[0.08] shadow-2xl shadow-black/60 p-8">
+                {/* WS Logo */}
+                <div className="flex justify-center mb-6">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center shadow-xl shadow-[#002395]/30">
+                    <span className="text-black font-bold text-lg tracking-tight">WS</span>
+                  </div>
+                </div>
+
+                <h2 className="text-2xl font-bold text-center text-white mb-2">Bienvenue sur WS</h2>
+                <p className="text-white/40 text-center text-sm mb-8">Connectez-vous avec votre adresse email pour commencer</p>
+
+                <div className="space-y-4">
+                  <div className="relative">
+                    <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
+                    <input
+                      type="email"
+                      value={loginInput}
+                      onChange={(e) => { setLoginInput(e.target.value); setLoginError('') }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                      placeholder="votre@email.com"
+                      className="w-full bg-[#1e1e32] rounded-xl pl-11 pr-4 py-3.5 text-white placeholder:text-white/35 outline-none border border-white/[0.10] focus:border-[#002395]/40 transition-all text-base"
+                      autoFocus
+                    />
+                  </div>
+
+                  {loginError && (
+                    <p className="text-red-400 text-sm text-center">{loginError}</p>
+                  )}
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleLogin}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#002395] to-[#ED2939] hover:from-[#003399] hover:to-[#C8102E] text-white font-semibold text-base transition-all shadow-lg shadow-[#002395]/20"
+                  >
+                    Continuer
+                  </motion.button>
+                </div>
+
+                <p className="text-white/20 text-xs text-center mt-6">
+                  En continuant, vous acceptez les conditions d&apos;utilisation de WS.
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

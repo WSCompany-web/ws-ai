@@ -418,11 +418,14 @@
       </div>
       <div class="sidebar-footer">
         <div class="user-info">
-          <div class="user-avatar">Y</div>
+          <div class="user-avatar" id="userAvatar">?</div>
           <div>
-            <p class="user-name">Yanis</p>
-            <p class="user-plan">Free</p>
+            <p class="user-name" id="userName">Connexion...</p>
+            <p class="user-plan" id="userEmail"></p>
           </div>
+          <button onclick="handleLogout()" style="background:none;border:none;color:rgba(255,255,255,0.2);cursor:pointer;padding:2px;margin-left:auto;" title="Se déconnecter">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
         </div>
       </div>
     </aside>
@@ -503,6 +506,7 @@
     let messages = [];
     let loading = false;
     let currentPanel = null;
+    let userEmail = null;
 
     // API — try local first, then deployed backend
     const API_URLS = [
@@ -723,8 +727,85 @@
       saveConversation();
     };
 
+    // ===== AUTH SYSTEM =====
+    const loginModal = document.getElementById('loginModal');
+    const loginInputField = document.getElementById('loginEmailInput');
+    const loginErrorEl = document.getElementById('loginError');
+
+    function checkAuth() {
+      const email = localStorage.getItem('ws_user_email');
+      if (email) {
+        userEmail = email;
+        updateUserUI();
+        loginModal.classList.add('hidden');
+      } else {
+        loginModal.classList.remove('hidden');
+        setTimeout(() => loginInputField.focus(), 300);
+      }
+    }
+
+    function handleLogin() {
+      const email = loginInputField.value.trim().toLowerCase();
+      if (!email || !email.includes('@') || !email.includes('.')) {
+        loginErrorEl.textContent = 'Adresse email invalide';
+        loginErrorEl.classList.remove('hidden');
+        return;
+      }
+      localStorage.setItem('ws_user_email', email);
+      userEmail = email;
+      updateUserUI();
+      loginModal.classList.add('hidden');
+      loginInputField.value = '';
+      loginErrorEl.classList.add('hidden');
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('ws_user_email');
+      userEmail = null;
+      updateUserUI();
+      loginModal.classList.remove('hidden');
+      setTimeout(() => loginInputField.focus(), 300);
+    }
+
+    function updateUserUI() {
+      const avatar = document.getElementById('userAvatar');
+      const name = document.getElementById('userName');
+      const emailEl = document.getElementById('userEmail');
+      if (userEmail) {
+        avatar.textContent = userEmail.charAt(0).toUpperCase();
+        name.textContent = userEmail.split('@')[0];
+        emailEl.textContent = userEmail;
+      } else {
+        avatar.textContent = '?';
+        name.textContent = 'Connexion...';
+        emailEl.textContent = '';
+      }
+    }
+
     // Init
     loadConversations();
+    checkAuth();
   </script>
+
+  <!-- LOGIN MODAL -->
+  <div id="loginModal" class="hidden" style="position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(12px);">
+    <div style="width:100%;max-width:420px;margin:0 16px;background:rgba(14,14,28,0.98);backdrop-filter:blur(20px);border-radius:24px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 24px 64px rgba(0,0,0,0.6);padding:40px;animation:slideUp 0.3s ease;">
+      <div style="display:flex;justify-content:center;margin-bottom:24px;">
+        <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#002395,rgba(255,255,255,0.9),#ED2939);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,35,149,0.3);">
+          <span style="color:black;font-weight:800;font-size:18px;">WS</span>
+        </div>
+      </div>
+      <h2 style="font-size:24px;font-weight:700;text-align:center;color:white;margin-bottom:8px;">Bienvenue sur WS</h2>
+      <p style="color:rgba(255,255,255,0.4);text-align:center;font-size:14px;margin-bottom:32px;">Connectez-vous avec votre adresse email pour commencer</p>
+      <div style="position:relative;margin-bottom:16px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <input type="email" id="loginEmailInput" placeholder="votre@email.com" onkeydown="if(event.key==='Enter')handleLogin()" style="width:100%;background:#1e1e32;border:1px solid rgba(255,255,255,0.10);border-radius:12px;padding:14px 16px 14px 44px;color:white;font-size:16px;font-family:inherit;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='rgba(0,35,149,0.4)'" onblur="this.style.borderColor='rgba(255,255,255,0.10)'" />
+      </div>
+      <p id="loginError" class="hidden" style="color:#f87171;font-size:14px;text-align:center;margin-bottom:12px;"></p>
+      <button onclick="handleLogin()" style="width:100%;padding:14px;border-radius:12px;background:linear-gradient(to right,#002395,#ED2939);color:white;font-weight:600;font-size:16px;border:none;cursor:pointer;transition:all 0.2s;font-family:inherit;">Continuer</button>
+      <p style="color:rgba(255,255,255,0.2);font-size:12px;text-align:center;margin-top:24px;">En continuant, vous acceptez les conditions d'utilisation de WS.</p>
+    </div>
+  </div>
+
 </body>
 </html>
