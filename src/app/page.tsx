@@ -466,7 +466,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 30 }}
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="flex-1 flex flex-col relative z-10 px-4 md:px-8 py-4 max-w-4xl mx-auto w-full"
+              className="flex-1 flex flex-col relative z-10 px-4 md:px-8 py-4 max-w-4xl mx-auto w-full bg-[#0a0a14]/85 backdrop-blur-2xl rounded-2xl border border-white/[0.06] shadow-2xl shadow-black/40"
             >
               {/* Panel header */}
               <div className="flex items-center justify-between mb-6">
@@ -505,7 +505,7 @@ export default function Home() {
                         onChange={(e) => setImagePrompt(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleGenerateImage()}
                         placeholder="Décrivez l'image que vous souhaitez créer..."
-                        className="w-full bg-white/[0.04] rounded-xl px-4 py-3 text-white placeholder:text-white/25 outline-none border border-white/[0.06] focus:border-violet-500/40 transition-all"
+                        className="w-full bg-[#1a1a2a] rounded-xl px-4 py-3 text-white placeholder:text-white/35 outline-none border border-white/[0.08] focus:border-violet-500/40 transition-all"
                       />
                     </div>
                     <motion.button
@@ -599,8 +599,8 @@ export default function Home() {
                         <div
                           className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                             msg.role === 'user'
-                              ? 'bg-emerald-500/15 border border-emerald-500/10 text-white/90'
-                              : 'bg-white/[0.04] border border-white/[0.06] text-white/80'
+                              ? 'bg-emerald-500/25 border border-emerald-500/15 text-white/95'
+                              : 'bg-[#1a1a2a] border border-white/[0.08] text-white/90'
                           }`}
                         >
                           <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -609,7 +609,7 @@ export default function Home() {
                     ))}
                     {chatLoading && (
                       <div className="flex justify-start">
-                        <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl px-4 py-3">
+                        <div className="bg-[#1a1a2a] border border-white/[0.08] rounded-2xl px-4 py-3">
                           <div className="flex items-center gap-1.5">
                             <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '0ms' }} />
                             <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -629,7 +629,7 @@ export default function Home() {
                       onChange={(e) => setChatInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendChat()}
                       placeholder="Écrivez votre message..."
-                      className="flex-1 bg-white/[0.04] rounded-xl px-4 py-3 text-white placeholder:text-white/25 outline-none border border-white/[0.06] focus:border-emerald-500/40 transition-all"
+                      className="flex-1 bg-[#1a1a2a] rounded-xl px-4 py-3 text-white placeholder:text-white/35 outline-none border border-white/[0.08] focus:border-emerald-500/40 transition-all"
                     />
                     <motion.button
                       whileHover={{ scale: 1.03 }}
@@ -656,7 +656,7 @@ export default function Home() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                         placeholder="Rechercher sur le web..."
-                        className="w-full bg-white/[0.04] rounded-xl pl-11 pr-4 py-3 text-white placeholder:text-white/25 outline-none border border-white/[0.06] focus:border-amber-500/40 transition-all"
+                        className="w-full bg-[#1a1a2a] rounded-xl pl-11 pr-4 py-3 text-white placeholder:text-white/35 outline-none border border-white/[0.08] focus:border-amber-500/40 transition-all"
                       />
                     </div>
                     <motion.button
@@ -711,7 +711,7 @@ export default function Home() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: i * 0.05 }}
-                          className="block bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04] hover:border-amber-500/20 rounded-xl p-4 transition-all group"
+                          className="block bg-[#1a1a2a] hover:bg-[#22223a] border border-white/[0.06] hover:border-amber-500/20 rounded-xl p-4 transition-all group"
                         >
                           <div className="flex items-start gap-3">
                             <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
