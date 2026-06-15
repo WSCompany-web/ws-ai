@@ -212,42 +212,42 @@ export default function Home() {
     <div className="min-h-screen flex bg-[#050510] text-white font-[var(--font-geist-sans)] overflow-hidden">
       {/* ===== FRANCE-THEMED BACKGROUND ===== */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        {/* AI-generated Paris background image */}
+        {/* AI-generated Paris background image — high visibility */}
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-70"
           style={{ backgroundImage: 'url(/france-bg.png)' }}
         />
 
-        {/* Bold French tricolor vertical bands — Bleu | Blanc | Rouge */}
+        {/* Very subtle tricolor tint — barely there, just a whisper */}
         <div className="absolute inset-0 flex">
-          <div className="w-1/3 h-full bg-[#002395]/40" />
-          <div className="w-1/3 h-full bg-white/[0.06]" />
-          <div className="w-1/3 h-full bg-[#ED2939]/35" />
+          <div className="w-1/3 h-full bg-[#002395]/8" />
+          <div className="w-1/3 h-full bg-white/[0.01]" />
+          <div className="w-1/3 h-full bg-[#ED2939]/7" />
         </div>
 
-        {/* Tricolor diagonal glow sweep */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#002395]/20 via-transparent to-[#ED2939]/20" />
+        {/* Faint tricolor diagonal glow */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#002395]/5 via-transparent to-[#ED2939]/5" />
 
-        {/* Floating bleu orb — top left */}
-        <div className="absolute -top-[10%] -left-[5%] w-[700px] h-[700px] rounded-full bg-gradient-to-br from-[#002395]/25 via-[#003399]/15 to-transparent animate-[float1_25s_ease-in-out_infinite] blur-3xl" />
-        {/* Floating rouge orb — bottom right */}
-        <div className="absolute -bottom-[10%] -right-[5%] w-[800px] h-[800px] rounded-full bg-gradient-to-tl from-[#ED2939]/20 via-[#C8102E]/10 to-transparent animate-[float2_30s_ease-in-out_infinite] blur-3xl" />
-        {/* Floating blanc orb — center top */}
-        <div className="absolute top-[20%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-white/[0.08] via-white/[0.03] to-transparent animate-[float3_20s_ease-in-out_infinite] blur-3xl" />
+        {/* Floating bleu orb — very subtle */}
+        <div className="absolute -top-[10%] -left-[5%] w-[700px] h-[700px] rounded-full bg-gradient-to-br from-[#002395]/8 via-[#003399]/4 to-transparent animate-[float1_25s_ease-in-out_infinite] blur-3xl" />
+        {/* Floating rouge orb — very subtle */}
+        <div className="absolute -bottom-[10%] -right-[5%] w-[800px] h-[800px] rounded-full bg-gradient-to-tl from-[#ED2939]/7 via-[#C8102E]/3 to-transparent animate-[float2_30s_ease-in-out_infinite] blur-3xl" />
+        {/* Floating blanc orb — barely visible */}
+        <div className="absolute top-[20%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-white/[0.03] via-white/[0.01] to-transparent animate-[float3_20s_ease-in-out_infinite] blur-3xl" />
 
-        {/* Bleu accent spot — mid right */}
-        <div className="absolute top-[15%] right-[15%] w-[300px] h-[300px] rounded-full bg-[#002395]/15 animate-[float4_18s_ease-in-out_infinite] blur-2xl" />
-        {/* Rouge accent spot — bottom left */}
-        <div className="absolute bottom-[10%] left-[15%] w-[350px] h-[350px] rounded-full bg-[#ED2939]/12 animate-[float5_22s_ease-in-out_infinite] blur-2xl" />
-        {/* White accent spot — center */}
-        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-white/[0.04] animate-[float3_22s_ease-in-out_infinite] blur-2xl" />
+        {/* Bleu accent spot — faint */}
+        <div className="absolute top-[15%] right-[15%] w-[300px] h-[300px] rounded-full bg-[#002395]/5 animate-[float4_18s_ease-in-out_infinite] blur-2xl" />
+        {/* Rouge accent spot — faint */}
+        <div className="absolute bottom-[10%] left-[15%] w-[350px] h-[350px] rounded-full bg-[#ED2939]/4 animate-[float5_22s_ease-in-out_infinite] blur-2xl" />
+        {/* White accent spot — faint */}
+        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-white/[0.015] animate-[float3_22s_ease-in-out_infinite] blur-2xl" />
 
-        {/* Subtle horizontal tricolor lines at top and bottom */}
-        <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#002395] via-white to-[#ED2939] opacity-60" />
-        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#002395] via-white to-[#ED2939] opacity-60" />
+        {/* Hair-thin tricolor lines at edges — ultra subtle */}
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-[#002395] via-white to-[#ED2939] opacity-20" />
+        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-[#002395] via-white to-[#ED2939] opacity-20" />
 
-        {/* Vignette to keep depth and readability */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.25)_50%,rgba(0,0,0,0.55)_100%)]" />
+        {/* Light vignette — keeps depth without killing the image */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.15)_50%,rgba(0,0,0,0.45)_100%)]" />
       </div>
 
       {/* ===== SIDEBAR ===== */}
