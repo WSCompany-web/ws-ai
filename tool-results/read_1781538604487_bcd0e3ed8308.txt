@@ -1,0 +1,566 @@
+   200→  ]
+   201→
+   202→  return (
+   203→    <div className="min-h-screen flex bg-[#050510] text-white font-[var(--font-geist-sans)] overflow-hidden">
+   204→      {/* ===== FRANCE-THEMED BACKGROUND ===== */}
+   205→      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+   206→        {/* AI-generated Paris background — cinematic Ken Burns slow zoom */}
+   207→        <div
+   208→          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-75 animate-[kenburns_60s_ease-in-out_infinite_alternate]"
+   209→          style={{ backgroundImage: 'url(/france-bg.png)' }}
+   210→        />
+   211→
+   212→        {/* Very subtle tricolor tint — barely there, just a whisper */}
+   213→        <div className="absolute inset-0 flex">
+   214→          <div className="w-1/3 h-full bg-[#002395]/8" />
+   215→          <div className="w-1/3 h-full bg-white/[0.01]" />
+   216→          <div className="w-1/3 h-full bg-[#ED2939]/7" />
+   217→        </div>
+   218→
+   219→        {/* Faint tricolor diagonal glow */}
+   220→        <div className="absolute inset-0 bg-gradient-to-br from-[#002395]/5 via-transparent to-[#ED2939]/5" />
+   221→
+   222→        {/* Floating bleu orb — very subtle */}
+   223→        <div className="absolute -top-[10%] -left-[5%] w-[700px] h-[700px] rounded-full bg-gradient-to-br from-[#002395]/8 via-[#003399]/4 to-transparent animate-[float1_25s_ease-in-out_infinite] blur-3xl" />
+   224→        {/* Floating rouge orb — very subtle */}
+   225→        <div className="absolute -bottom-[10%] -right-[5%] w-[800px] h-[800px] rounded-full bg-gradient-to-tl from-[#ED2939]/7 via-[#C8102E]/3 to-transparent animate-[float2_30s_ease-in-out_infinite] blur-3xl" />
+   226→        {/* Floating blanc orb — barely visible */}
+   227→        <div className="absolute top-[20%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-white/[0.03] via-white/[0.01] to-transparent animate-[float3_20s_ease-in-out_infinite] blur-3xl" />
+   228→
+   229→        {/* Bleu accent spot — faint */}
+   230→        <div className="absolute top-[15%] right-[15%] w-[300px] h-[300px] rounded-full bg-[#002395]/5 animate-[float4_18s_ease-in-out_infinite] blur-2xl" />
+   231→        {/* Rouge accent spot — faint */}
+   232→        <div className="absolute bottom-[10%] left-[15%] w-[350px] h-[350px] rounded-full bg-[#ED2939]/4 animate-[float5_22s_ease-in-out_infinite] blur-2xl" />
+   233→        {/* White accent spot — faint */}
+   234→        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-white/[0.015] animate-[float3_22s_ease-in-out_infinite] blur-2xl" />
+   235→
+   236→        {/* Hair-thin tricolor lines at edges — ultra subtle */}
+   237→        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-[#002395] via-white to-[#ED2939] opacity-20" />
+   238→        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-[#002395] via-white to-[#ED2939] opacity-20" />
+   239→
+   240→        {/* Light vignette — keeps depth without killing the image */}
+   241→        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.15)_50%,rgba(0,0,0,0.45)_100%)]" />
+   242→      </div>
+   243→
+   244→      {/* ===== SIDEBAR ===== */}
+   245→      <aside
+   246→        className={`fixed md:relative z-40 flex flex-col w-[260px] h-screen bg-[#0d0d1a]/95 backdrop-blur-xl border-r border-[#002395]/[0.08] transition-transform duration-300 ${
+   247→          sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+   248→        }`}
+   249→      >
+   250→        {/* Sidebar Header */}
+   251→        <div className="flex items-center gap-3 px-4 py-4">
+   252→          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center shadow-lg shadow-[#002395]/20">
+   253→            <span className="text-black font-bold text-sm tracking-tight">WS</span>
+   254→          </div>
+   255→          <span className="text-white font-semibold text-base tracking-tight">WS</span>
+   256→          <button
+   257→            className="ml-auto md:hidden text-white/50 hover:text-white"
+   258→            onClick={() => setSidebarOpen(false)}
+   259→          >
+   260→            <X size={18} />
+   261→          </button>
+   262→        </div>
+   263→
+   264→        {/* Search */}
+   265→        <div className="px-3 mb-3">
+   266→          <div className="flex items-center gap-2 bg-[#1a1a2e]/90 hover:bg-[#1e1e38]/95 rounded-xl px-3 py-2.5 border border-white/[0.08] transition-colors cursor-text backdrop-blur-md">
+   267→            <Search size={14} className="text-white/30" />
+   268→            <span className="text-white/25 text-sm">Rechercher</span>
+   269→          </div>
+   270→        </div>
+   271→
+   272→        {/* Nav Items */}
+   273→        <nav className="px-2 mb-4">
+   274→          {navItems.map((item, i) => (
+   275→            <button
+   276→              key={i}
+   277→              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:bg-[#1a1a2e]/70 hover:text-white/90 transition-all text-sm group"
+   278→            >
+   279→              <item.icon size={16} className="text-white/35 group-hover:text-white/60 transition-colors" />
+   280→              {item.label}
+   281→            </button>
+   282→          ))}
+   283→        </nav>
+   284→
+   285→        {/* Sidebar Footer */}
+   286→        <div className="p-3 border-t border-white/[0.06]">
+   287→          <div className="flex items-center gap-3 px-2 py-2">
+   288→            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#002395] to-[#ED2939] flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-[#002395]/20">
+   289→              Y
+   290→            </div>
+   291→            <div className="flex-1 min-w-0">
+   292→              <p className="text-white/80 text-sm font-medium truncate">Yanis</p>
+   293→              <p className="text-white/25 text-xs">Free</p>
+   294→            </div>
+   295→          </div>
+   296→          <button className="w-full mt-2 flex items-center justify-center gap-2 bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 rounded-xl px-3 py-2.5 text-white/60 hover:text-white transition-all text-sm border border-white/[0.08]">
+   297→            <Star size={14} className="text-amber-400" />
+   298→            Mettre à niveau
+   299→          </button>
+   300→        </div>
+   301→      </aside>
+   302→
+   303→      {/* Sidebar overlay on mobile */}
+   304→      {sidebarOpen && (
+   305→        <div
+   306→          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+   307→          onClick={() => setSidebarOpen(false)}
+   308→        />
+   309→      )}
+   310→
+   311→      {/* ===== MAIN CONTENT ===== */}
+   312→      <main className="flex-1 flex flex-col min-h-screen relative">
+   313→        {/* Top Bar */}
+   314→        <header className="flex items-center justify-between px-4 py-3 md:px-6 relative z-10">
+   315→          <button
+   316→            className="md:hidden text-white/50 hover:text-white transition-colors"
+   317→            onClick={() => setSidebarOpen(true)}
+   318→          >
+   319→            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+   320→              <line x1="3" y1="6" x2="21" y2="6" />
+   321→              <line x1="3" y1="12" x2="21" y2="12" />
+   322→              <line x1="3" y1="18" x2="21" y2="18" />
+   323→            </svg>
+   324→          </button>
+   325→          <div className="md:hidden flex items-center gap-2">
+   326→            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center">
+   327→              <span className="text-black font-bold text-[10px]">WS</span>
+   328→            </div>
+   329→          </div>
+   330→          <div className="flex items-center gap-2 ml-auto">
+   331→            <button className="flex items-center gap-1.5 bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 rounded-full px-3 py-1.5 text-white/60 hover:text-white transition-all text-sm border border-white/[0.08]">
+   332→              <Star size={12} className="text-amber-400" />
+   333→              Mettre à niveau
+   334→            </button>
+   335→            <button className="w-8 h-8 rounded-full bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all">
+   336→              <Settings size={16} className="text-white/40" />
+   337→            </button>
+   338→          </div>
+   339→        </header>
+   340→
+   341→        {/* Center / Home View */}
+   342→        <AnimatePresence mode="wait">
+   343→          {activePanel === null ? (
+   344→            <motion.div
+   345→              key="home"
+   346→              initial={{ opacity: 0 }}
+   347→              animate={{ opacity: 1 }}
+   348→              exit={{ opacity: 0, y: -20 }}
+   349→              transition={{ duration: 0.3 }}
+   350→              className="flex-1 flex flex-col items-center justify-center px-4 -mt-16 relative z-10"
+   351→            >
+   352→              {/* WS Logo - Large with glow */}
+   353→              <motion.div
+   354→                initial={{ opacity: 0, scale: 0.8 }}
+   355→                animate={{ opacity: 1, scale: 1 }}
+   356→                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+   357→                className="relative mb-6"
+   358→              >
+   359→                {/* Animated glow ring — French tricolor */}
+   360→                <div className="absolute inset-0 -m-8 rounded-full bg-gradient-to-br from-[#002395]/15 via-white/5 to-[#ED2939]/15 blur-2xl animate-pulse" />
+   361→                <h1 className="relative text-8xl md:text-[10rem] font-bold tracking-tighter bg-gradient-to-b from-white via-white/90 to-white/50 bg-clip-text text-transparent">
+   362→                  WS
+   363→                </h1>
+   364→              </motion.div>
+   365→
+   366→              {/* Tagline */}
+   367→              <motion.p
+   368→                initial={{ opacity: 0, y: 10 }}
+   369→                animate={{ opacity: 1, y: 0 }}
+   370→                transition={{ delay: 0.2, duration: 0.6 }}
+   371→                className="text-white/40 text-lg md:text-xl mb-10 flex items-center gap-2"
+   372→              >
+   373→                <Sparkles size={16} className="text-amber-400/60" />
+   374→                Toujours prêt à répondre.
+   375→              </motion.p>
+   376→
+   377→              {/* Search Bar */}
+   378→              <motion.div
+   379→                initial={{ opacity: 0, y: 20 }}
+   380→                animate={{ opacity: 1, y: 0 }}
+   381→                transition={{ delay: 0.3, duration: 0.6 }}
+   382→                className="w-full max-w-2xl"
+   383→              >
+   384→                <div className="relative flex items-center bg-[#12122a]/95 backdrop-blur-xl rounded-2xl px-5 py-4 border border-white/[0.10] hover:border-[#002395]/30 focus-within:border-[#002395]/40 focus-within:bg-[#161630]/95 transition-all shadow-2xl shadow-black/30">
+   385→                  <Sparkles size={18} className="text-white/20 mr-3 flex-shrink-0" />
+   386→                  <input
+   387→                    type="text"
+   388→                    value={inputValue}
+   389→                    onChange={(e) => setInputValue(e.target.value)}
+   390→                    onKeyDown={(e) => e.key === 'Enter' && handleMainInput()}
+   391→                    placeholder="Poser une question à WS..."
+   392→                    className="flex-1 bg-transparent text-white placeholder:text-white/25 outline-none text-base"
+   393→                  />
+   394→                  <div className="flex items-center gap-2 ml-3">
+   395→                    <button className="w-8 h-8 rounded-xl bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all">
+   396→                      <Mic size={16} className="text-white/40" />
+   397→                    </button>
+   398→                    <button className="w-8 h-8 rounded-xl bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all">
+   399→                      <Volume2 size={16} className="text-white/40" />
+   400→                    </button>
+   401→                    {inputValue.trim() && (
+   402→                      <motion.button
+   403→                        initial={{ scale: 0 }}
+   404→                        animate={{ scale: 1 }}
+   405→                        onClick={handleMainInput}
+   406→                        className="w-8 h-8 rounded-xl bg-[#002395]/80 hover:bg-[#002395] flex items-center justify-center transition-all"
+   407→                      >
+   408→                        <ArrowRight size={16} className="text-white" />
+   409→                      </motion.button>
+   410→                    )}
+   411→                  </div>
+   412→                </div>
+   413→              </motion.div>
+   414→
+   415→              {/* Action Buttons */}
+   416→              <motion.div
+   417→                initial={{ opacity: 0, y: 20 }}
+   418→                animate={{ opacity: 1, y: 0 }}
+   419→                transition={{ delay: 0.5, duration: 0.6 }}
+   420→                className="flex flex-wrap items-center justify-center gap-3 mt-6"
+   421→              >
+   422→                {actions.map((action, i) => (
+   423→                  <motion.button
+   424→                    key={i}
+   425→                    whileHover={{ scale: 1.03, y: -2 }}
+   426→                    whileTap={{ scale: 0.97 }}
+   427→                    onClick={() => setActivePanel(action.panel)}
+   428→                    className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl border border-white/[0.06] ${action.hoverBorder} bg-gradient-to-r ${action.color} hover:bg-opacity-150 text-white/70 hover:text-white transition-all duration-300 backdrop-blur-sm`}
+   429→                  >
+   430→                    <action.icon size={16} className={action.iconColor} />
+   431→                    <span className="text-sm font-medium">{action.label}</span>
+   432→                  </motion.button>
+   433→                ))}
+   434→              </motion.div>
+   435→            </motion.div>
+   436→          ) : (
+   437→            /* ===== ACTIVE PANEL ===== */
+   438→            <motion.div
+   439→              key={activePanel}
+   440→              initial={{ opacity: 0, y: 30 }}
+   441→              animate={{ opacity: 1, y: 0 }}
+   442→              exit={{ opacity: 0, y: 30 }}
+   443→              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+   444→              className="flex-1 flex flex-col relative z-10 px-4 md:px-8 py-4 max-w-4xl mx-auto w-full bg-[#0e0e1c]/95 backdrop-blur-2xl rounded-2xl border border-white/[0.08] shadow-2xl shadow-black/40"
+   445→            >
+   446→              {/* Panel header */}
+   447→              <div className="flex items-center justify-between mb-6">
+   448→                <div className="flex items-center gap-3">
+   449→                  <button
+   450→                    onClick={() => setActivePanel(null)}
+   451→                    className="w-8 h-8 rounded-xl bg-[#1a1a2e]/80 hover:bg-[#22223a]/90 flex items-center justify-center transition-all"
+   452→                  >
+   453→                    <X size={16} className="text-white/50" />
+   454→                  </button>
+   455→                  <h2 className="text-lg font-semibold text-white/80">
+   456→                    {activePanel === 'image' && 'Créer une image'}
+   457→                    {activePanel === 'write' && 'Écrire ou modifier'}
+   458→                    {activePanel === 'search' && 'Recherche web'}
+   459→                  </h2>
+   460→                </div>
+   461→                <div
+   462→                  className={`w-2 h-2 rounded-full ${
+   463→                    activePanel === 'image'
+   464→                      ? 'bg-violet-400'
+   465→                      : activePanel === 'write'
+   466→                        ? 'bg-emerald-400'
+   467→                        : 'bg-amber-400'
+   468→                  }`}
+   469→                />
+   470→              </div>
+   471→
+   472→              {/* ===== IMAGE PANEL ===== */}
+   473→              {activePanel === 'image' && (
+   474→                <div className="flex-1 flex flex-col gap-6">
+   475→                  <div className="flex gap-3">
+   476→                    <div className="flex-1 relative">
+   477→                      <input
+   478→                        type="text"
+   479→                        value={imagePrompt}
+   480→                        onChange={(e) => setImagePrompt(e.target.value)}
+   481→                        onKeyDown={(e) => e.key === 'Enter' && handleGenerateImage()}
+   482→                        placeholder="Décrivez l'image que vous souhaitez créer..."
+   483→                        className="w-full bg-[#1e1e32] rounded-xl px-4 py-3 text-white placeholder:text-white/40 outline-none border border-white/[0.10] focus:border-violet-500/40 transition-all"
+   484→                      />
+   485→                    </div>
+   486→                    <motion.button
+   487→                      whileHover={{ scale: 1.03 }}
+   488→                      whileTap={{ scale: 0.97 }}
+   489→                      onClick={handleGenerateImage}
+   490→                      disabled={imageLoading || !imagePrompt.trim()}
+   491→                      className="px-5 py-3 rounded-xl bg-violet-500/80 hover:bg-violet-500 disabled:opacity-40 disabled:hover:bg-violet-500/80 text-white font-medium text-sm flex items-center gap-2 transition-all"
+   492→                    >
+   493→                      {imageLoading ? (
+   494→                        <Loader2 size={16} className="animate-spin" />
+   495→                      ) : (
+   496→                        <ImageIcon size={16} />
+   497→                      )}
+   498→                      Générer
+   499→                    </motion.button>
+   500→                  </div>
+   501→
+   502→                  {imageError && (
+   503→                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-300 text-sm">
+   504→                      {imageError}
+   505→                    </div>
+   506→                  )}
+   507→
+   508→                  {imageLoading && (
+   509→                    <div className="flex-1 flex items-center justify-center">
+   510→                      <div className="flex flex-col items-center gap-4">
+   511→                        <div className="relative">
+   512→                          <div className="w-16 h-16 rounded-full border-2 border-violet-500/20 border-t-violet-500 animate-spin" />
+   513→                          <ImageIcon size={20} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-violet-400" />
+   514→                        </div>
+   515→                        <p className="text-white/40 text-sm">Création en cours...</p>
+   516→                      </div>
+   517→                    </div>
+   518→                  )}
+   519→
+   520→                  {generatedImage && !imageLoading && (
+   521→                    <motion.div
+   522→                      initial={{ opacity: 0, scale: 0.95 }}
+   523→                      animate={{ opacity: 1, scale: 1 }}
+   524→                      className="flex-1 flex flex-col items-center gap-4"
+   525→                    >
+   526→                      <div className="relative rounded-2xl overflow-hidden border border-white/[0.06] shadow-2xl shadow-violet-500/10 max-w-lg">
+   527→                        <img
+   528→                          src={generatedImage}
+   529→                          alt={imagePrompt}
+   530→                          className="w-full h-auto"
+   531→                        />
+   532→                      </div>
+   533→                      <p className="text-white/30 text-sm text-center max-w-md">
+   534→                        &ldquo;{imagePrompt}&rdquo;
+   535→                      </p>
+   536→                    </motion.div>
+   537→                  )}
+   538→
+   539→                  {!generatedImage && !imageLoading && !imageError && (
+   540→                    <div className="flex-1 flex items-center justify-center">
+   541→                      <div className="text-center">
+   542→                        <div className="w-20 h-20 rounded-2xl bg-violet-500/10 border border-violet-500/10 flex items-center justify-center mx-auto mb-4">
+   543→                          <ImageIcon size={32} className="text-violet-400/50" />
+   544→                        </div>
+   545→                        <p className="text-white/30 text-sm">Décrivez votre image et cliquez Générer</p>
+   546→                      </div>
+   547→                    </div>
+   548→                  )}
+   549→                </div>
+   550→              )}
+   551→
+   552→              {/* ===== WRITE / CHAT PANEL ===== */}
+   553→              {activePanel === 'write' && (
+   554→                <div className="flex-1 flex flex-col gap-4 min-h-0">
+   555→                  {/* Messages */}
+   556→                  <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+   557→                    {chatMessages.length === 0 && (
+   558→                      <div className="flex-1 flex items-center justify-center h-full min-h-[200px]">
+   559→                        <div className="text-center">
+   560→                          <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 border border-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+   561→                            <PenLine size={32} className="text-emerald-400/50" />
+   562→                          </div>
+   563→                          <p className="text-white/30 text-sm">Posez une question ou demandez à WS d&apos;écrire quelque chose</p>
+   564→                        </div>
+   565→                      </div>
+   566→                    )}
+   567→                    {chatMessages.map((msg, i) => (
+   568→                      <motion.div
+   569→                        key={i}
+   570→                        initial={{ opacity: 0, y: 10 }}
+   571→                        animate={{ opacity: 1, y: 0 }}
+   572→                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+   573→                      >
+   574→                        <div className={`max-w-[85%] ${msg.role === 'assistant' ? 'flex gap-3' : ''}`}>
+   575→                          {msg.role === 'assistant' && (
+   576→                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg shadow-[#002395]/20">
+   577→                              <span className="text-black font-bold text-[9px]">WS</span>
+   578→                            </div>
+   579→                          )}
+   580→                          <div
+   581→                            className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+   582→                              msg.role === 'user'
+   583→                                ? 'bg-emerald-500/40 border border-emerald-500/20 text-white/95'
+   584→                                : 'bg-[#1e1e32] border border-white/[0.10] text-white/90'
+   585→                            }`}
+   586→                          >
+   587→                            <div className="whitespace-pre-wrap">{msg.content}</div>
+   588→                          </div>
+   589→                        </div>
+   590→                      </motion.div>
+   591→                    ))}
+   592→                    {chatLoading && (
+   593→                      <div className="flex justify-start">
+   594→                        <div className="flex gap-3">
+   595→                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg shadow-[#002395]/20">
+   596→                            <span className="text-black font-bold text-[9px]">WS</span>
+   597→                          </div>
+   598→                          <div className="bg-[#1e1e32] border border-white/[0.10] rounded-2xl px-4 py-3">
+   599→                            <div className="flex items-center gap-1.5">
+   600→                              <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+   601→                              <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+   602→                              <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+   603→                            </div>
+   604→                          </div>
+   605→                        </div>
+   606→                      </div>
+   607→                    )}
+   608→                    <div ref={chatEndRef} />
+   609→                  </div>
+   610→
+   611→                  {/* Chat input */}
+   612→                  <div className="flex gap-3 pt-2">
+   613→                    <input
+   614→                      type="text"
+   615→                      value={chatInput}
+   616→                      onChange={(e) => setChatInput(e.target.value)}
+   617→                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendChat()}
+   618→                      placeholder="Écrivez votre message..."
+   619→                      className="flex-1 bg-[#1e1e32] rounded-xl px-4 py-3 text-white placeholder:text-white/40 outline-none border border-white/[0.10] focus:border-emerald-500/40 transition-all"
+   620→                    />
+   621→                    <motion.button
+   622→                      whileHover={{ scale: 1.03 }}
+   623→                      whileTap={{ scale: 0.97 }}
+   624→                      onClick={handleSendChat}
+   625→                      disabled={chatLoading || !chatInput.trim()}
+   626→                      className="px-4 py-3 rounded-xl bg-emerald-500/80 hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-500/80 text-white transition-all"
+   627→                    >
+   628→                      <Send size={16} />
+   629→                    </motion.button>
+   630→                  </div>
+   631→                </div>
+   632→              )}
+   633→
+   634→              {/* ===== SEARCH PANEL ===== */}
+   635→              {activePanel === 'search' && (
+   636→                <div className="flex-1 flex flex-col gap-6">
+   637→                  <div className="flex gap-3">
+   638→                    <div className="flex-1 relative">
+   639→                      <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/25" />
+   640→                      <input
+   641→                        type="text"
+   642→                        value={searchQuery}
+   643→                        onChange={(e) => setSearchQuery(e.target.value)}
+   644→                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+   645→                        placeholder="Rechercher sur le web..."
+   646→                        className="w-full bg-[#1e1e32] rounded-xl pl-11 pr-4 py-3 text-white placeholder:text-white/40 outline-none border border-white/[0.10] focus:border-amber-500/40 transition-all"
+   647→                      />
+   648→                    </div>
+   649→                    <motion.button
+   650→                      whileHover={{ scale: 1.03 }}
+   651→                      whileTap={{ scale: 0.97 }}
+   652→                      onClick={handleSearch}
+   653→                      disabled={searchLoading || !searchQuery.trim()}
+   654→                      className="px-5 py-3 rounded-xl bg-amber-500/80 hover:bg-amber-500 disabled:opacity-40 disabled:hover:bg-amber-500/80 text-white font-medium text-sm flex items-center gap-2 transition-all"
+   655→                    >
+   656→                      {searchLoading ? (
+   657→                        <Loader2 size={16} className="animate-spin" />
+   658→                      ) : (
+   659→                        <Search size={16} />
+   660→                      )}
+   661→                      Chercher
+   662→                    </motion.button>
+   663→                  </div>
+   664→
+   665→                  {searchError && (
+   666→                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-300 text-sm">
+   667→                      {searchError}
+   668→                    </div>
+   669→                  )}
+   670→
+   671→                  {searchLoading && (
+   672→                    <div className="flex items-center justify-center py-12">
+   673→                      <div className="flex flex-col items-center gap-4">
+   674→                        <div className="relative">
+   675→                          <div className="w-14 h-14 rounded-full border-2 border-amber-500/20 border-t-amber-500 animate-spin" />
+   676→                          <Search size={18} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-amber-400" />
+   677→                        </div>
+   678→                        <p className="text-white/40 text-sm">Recherche en cours...</p>
+   679→                      </div>
+   680→                    </div>
+   681→                  )}
+   682→
+   683→                  {searchResults.length > 0 && !searchLoading && (
+   684→                    <motion.div
+   685→                      initial={{ opacity: 0 }}
+   686→                      animate={{ opacity: 1 }}
+   687→                      className="space-y-3 overflow-y-auto max-h-[60vh] custom-scrollbar"
+   688→                    >
+   689→                      <p className="text-white/30 text-xs uppercase tracking-widest font-medium">
+   690→                        {searchResults.length} résultat{searchResults.length > 1 ? 's' : ''}
+   691→                      </p>
+   692→                      {searchResults.map((result, i) => (
+   693→                        <motion.a
+   694→                          key={i}
+   695→                          href={result.url}
+   696→                          target="_blank"
+   697→                          rel="noopener noreferrer"
+   698→                          initial={{ opacity: 0, y: 10 }}
+   699→                          animate={{ opacity: 1, y: 0 }}
+   700→                          transition={{ delay: i * 0.05 }}
+   701→                          className="block bg-[#1e1e32] hover:bg-[#26264a] border border-white/[0.10] hover:border-amber-500/20 rounded-xl p-4 transition-all group"
+   702→                        >
+   703→                          <div className="flex items-start gap-3">
+   704→                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+   705→                              <GlobeIcon className="text-amber-400/60" size={14} />
+   706→                            </div>
+   707→                            <div className="flex-1 min-w-0">
+   708→                              <h3 className="text-white/80 text-sm font-medium group-hover:text-amber-300 transition-colors truncate">
+   709→                                {result.title || 'Sans titre'}
+   710→                              </h3>
+   711→                              <p className="text-white/20 text-xs truncate mt-0.5">{result.url}</p>
+   712→                              <p className="text-white/40 text-sm mt-1.5 line-clamp-2">{result.snippet}</p>
+   713→                            </div>
+   714→                            <ArrowRight size={14} className="text-white/10 group-hover:text-amber-400/50 transition-colors mt-1 flex-shrink-0" />
+   715→                          </div>
+   716→                        </motion.a>
+   717→                      ))}
+   718→                    </motion.div>
+   719→                  )}
+   720→
+   721→                  {searchResults.length === 0 && !searchLoading && !searchError && (
+   722→                    <div className="flex-1 flex items-center justify-center">
+   723→                      <div className="text-center">
+   724→                        <div className="w-20 h-20 rounded-2xl bg-amber-500/10 border border-amber-500/10 flex items-center justify-center mx-auto mb-4">
+   725→                          <Search size={32} className="text-amber-400/50" />
+   726→                        </div>
+   727→                        <p className="text-white/30 text-sm">Tapez votre recherche et cliquez Chercher</p>
+   728→                      </div>
+   729→                    </div>
+   730→                  )}
+   731→                </div>
+   732→              )}
+   733→            </motion.div>
+   734→          )}
+   735→        </AnimatePresence>
+   736→
+   737→        {/* Footer */}
+   738→        <footer className="mt-auto px-4 py-4 text-center relative z-10">
+   739→          <p className="text-white/15 text-xs">
+   740→            WS peut faire des erreurs. Envisagez de vérifier les informations importantes.
+   741→          </p>
+   742→        </footer>
+   743→      </main>
+   744→    </div>
+   745→  )
+   746→}
+   747→
+   748→function GlobeIcon({ className, size }: { className?: string; size?: number }) {
+   749→  return (
+   750→    <svg
+   751→      width={size || 24}
+   752→      height={size || 24}
+   753→      viewBox="0 0 24 24"
+   754→      fill="none"
+   755→      stroke="currentColor"
+   756→      strokeWidth="2"
+   757→      className={className}
+   758→    >
+   759→      <circle cx="12" cy="12" r="10" />
+   760→      <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+   761→      <path d="M2 12h20" />
+   762→    </svg>
+   763→  )
+   764→}
+   765→

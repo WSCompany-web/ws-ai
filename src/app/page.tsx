@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useSyncExternalStore, useRef, useCallback } from 'react'
+import { useState, useSyncExternalStore, useRef, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ImageIcon,
@@ -13,13 +13,11 @@ import {
   Sparkles,
   ArrowRight,
   Loader2,
-  Library,
-  FolderKanban,
-  AppWindowMac,
-  Code2,
   Plus,
   Settings,
   Star,
+  MessageSquare,
+  Trash2,
 } from 'lucide-react'
 
 function useMounted() {
@@ -43,6 +41,13 @@ interface SearchResult {
   snippet: string
 }
 
+interface Conversation {
+  id: string
+  title: string
+  updatedAt: string
+  messages: { role: string; content: string }[]
+}
+
 export default function Home() {
   const mounted = useMounted()
   const [inputValue, setInputValue] = useState('')
@@ -61,6 +66,10 @@ export default function Home() {
   const [chatLoading, setChatLoading] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
+  // Conversation persistence state
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
+
   // Search state
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
@@ -70,6 +79,68 @@ export default function Home() {
   const scrollToBottom = useCallback(() => {
     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
   }, [])
+
+  // Load conversations from DB on mount
+  const loadConversations = useCallback(async () => {
+    try {
+      const res = await fetch('/api/conversations')
+      const data = await res.json()
+      if (data.conversations) {
+        setConversations(data.conversations)
+      }
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    if (mounted) {
+      loadConversations()
+    }
+  }, [mounted, loadConversations])
+
+  const handleNewConversation = async () => {
+    try {
+      const res = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Nouvelle conversation' }),
+      })
+      const data = await res.json()
+      if (data.conversation) {
+        setActiveConversationId(data.conversation.id)
+        setChatMessages([])
+        setActivePanel('write')
+        await loadConversations()
+      }
+    } catch {}
+  }
+
+  const handleLoadConversation = async (id: string) => {
+    try {
+      const res = await fetch(`/api/conversations/${id}`)
+      const data = await res.json()
+      if (data.conversation) {
+        setActiveConversationId(id)
+        setChatMessages(data.conversation.messages.map((m: { role: string; content: string }) => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })))
+        setActivePanel('write')
+        scrollToBottom()
+      }
+    } catch {}
+  }
+
+  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await fetch(`/api/conversations/${id}`, { method: 'DELETE' })
+      if (activeConversationId === id) {
+        setActiveConversationId(null)
+        setChatMessages([])
+      }
+      await loadConversations()
+    } catch {}
+  }
 
   const handleGenerateImage = async () => {
     if (!imagePrompt.trim()) return
@@ -103,11 +174,29 @@ export default function Home() {
     setChatInput('')
     setChatLoading(true)
     scrollToBottom()
+
+    // Create conversation if none exists
+    let convId = activeConversationId
+    if (!convId) {
+      try {
+        const createRes = await fetch('/api/conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: chatInput.slice(0, 50) }),
+        })
+        const createData = await createRes.json()
+        if (createData.conversation) {
+          convId = createData.conversation.id
+          setActiveConversationId(convId)
+        }
+      } catch {}
+    }
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ messages: newMessages, conversationId: convId }),
       })
       const data = await res.json()
       if (data.error) {
@@ -120,6 +209,7 @@ export default function Home() {
     } finally {
       setChatLoading(false)
       scrollToBottom()
+      loadConversations()
     }
   }
 
@@ -156,47 +246,57 @@ export default function Home() {
     }
   }
 
-  const handleMainInput = () => {
-    if (inputValue.trim()) {
-      setActivePanel('write')
-      setChatMessages([{ role: 'user', content: inputValue }])
-      setChatInput('')
-      setInputValue('')
-      setChatLoading(true)
-      fetch('/api/chat', {
+  const handleMainInput = async () => {
+    if (!inputValue.trim()) return
+
+    // Create a new conversation
+    let convId: string | null = null
+    try {
+      const createRes = await fetch('/api/conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [{ role: 'user', content: inputValue }] }),
+        body: JSON.stringify({ title: inputValue.slice(0, 50) }),
       })
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.content) {
-            setChatMessages([
-              { role: 'user', content: inputValue },
-              { role: 'assistant', content: data.content },
-            ])
-          }
-        })
-        .catch(() => {})
-        .finally(() => {
-          setChatLoading(false)
-          scrollToBottom()
-        })
-    }
+      const createData = await createRes.json()
+      if (createData.conversation) {
+        convId = createData.conversation.id
+        setActiveConversationId(convId)
+      }
+    } catch {}
+
+    const userContent = inputValue
+    setActivePanel('write')
+    setChatMessages([{ role: 'user', content: userContent }])
+    setChatInput('')
+    setInputValue('')
+    setChatLoading(true)
+
+    fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: userContent }], conversationId: convId }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.content) {
+          setChatMessages([
+            { role: 'user', content: userContent },
+            { role: 'assistant', content: data.content },
+          ])
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        setChatLoading(false)
+        scrollToBottom()
+        loadConversations()
+      })
   }
 
   const actions = [
     { icon: ImageIcon, label: 'Créer une image', panel: 'image' as const, color: 'from-violet-500/20 to-fuchsia-500/20', hoverBorder: 'hover:border-violet-500/40', iconColor: 'text-violet-400' },
     { icon: PenLine, label: 'Écrire ou modifier', panel: 'write' as const, color: 'from-emerald-500/20 to-teal-500/20', hoverBorder: 'hover:border-emerald-500/40', iconColor: 'text-emerald-400' },
     { icon: Search, label: 'Faire une recherche', panel: 'search' as const, color: 'from-amber-500/20 to-orange-500/20', hoverBorder: 'hover:border-amber-500/40', iconColor: 'text-amber-400' },
-  ]
-
-  const navItems = [
-    { icon: Library, label: 'Bibliothèque' },
-    { icon: FolderKanban, label: 'Projets' },
-    { icon: AppWindowMac, label: 'Applications' },
-    { icon: Code2, label: 'Codex' },
-    { icon: Plus, label: 'Plus' },
   ]
 
   return (
@@ -269,18 +369,46 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Nav Items */}
-        <nav className="px-2 mb-4">
-          {navItems.map((item, i) => (
-            <button
-              key={i}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:bg-[#1a1a2e]/70 hover:text-white/90 transition-all text-sm group"
-            >
-              <item.icon size={16} className="text-white/35 group-hover:text-white/60 transition-colors" />
-              {item.label}
-            </button>
-          ))}
-        </nav>
+        {/* New Conversation Button */}
+        <div className="px-3 mb-3">
+          <button
+            onClick={handleNewConversation}
+            className="w-full flex items-center gap-2.5 bg-[#1a1a2e]/80 hover:bg-[#22223a]/95 rounded-xl px-3 py-2.5 text-white/70 hover:text-white transition-all text-sm border border-white/[0.06] hover:border-emerald-500/20"
+          >
+            <Plus size={16} className="text-emerald-400/70" />
+            Nouvelle conversation
+          </button>
+        </div>
+
+        {/* Conversation History */}
+        <div className="px-3 flex-1 overflow-y-auto custom-scrollbar">
+          <p className="text-white/30 text-xs font-medium uppercase tracking-widest mb-2 px-1">Conversations</p>
+          <div className="space-y-0.5">
+            {conversations.length === 0 && (
+              <p className="text-white/20 text-xs px-3 py-2">Aucune conversation</p>
+            )}
+            {conversations.map((conv) => (
+              <div
+                key={conv.id}
+                onClick={() => handleLoadConversation(conv.id)}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm cursor-pointer transition-all group ${
+                  activeConversationId === conv.id
+                    ? 'bg-emerald-500/15 text-white/90 border border-emerald-500/15'
+                    : 'text-white/45 hover:bg-[#1a1a2e]/70 hover:text-white/80'
+                }`}
+              >
+                <MessageSquare size={14} className={activeConversationId === conv.id ? 'text-emerald-400/70' : 'text-white/20 group-hover:text-white/40'} />
+                <span className="truncate flex-1">{conv.title}</span>
+                <button
+                  onClick={(e) => handleDeleteConversation(conv.id, e)}
+                  className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-400 transition-all flex-shrink-0"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Sidebar Footer */}
         <div className="p-3 border-t border-white/[0.06]">
