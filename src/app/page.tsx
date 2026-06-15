@@ -210,39 +210,51 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex bg-[#0a0a0a] text-white font-[var(--font-geist-sans)] overflow-hidden">
-      {/* ===== ANIMATED BACKGROUND ===== */}
+      {/* ===== FRANCE-THEMED BACKGROUND ===== */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        {/* Large gradient orbs */}
-        <div className="absolute -top-1/4 -left-1/4 w-[800px] h-[800px] rounded-full bg-gradient-to-br from-violet-600/[0.07] via-fuchsia-600/[0.04] to-transparent animate-[float1_25s_ease-in-out_infinite] blur-3xl" />
-        <div className="absolute -bottom-1/4 -right-1/4 w-[900px] h-[900px] rounded-full bg-gradient-to-tl from-emerald-600/[0.06] via-teal-600/[0.03] to-transparent animate-[float2_30s_ease-in-out_infinite] blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-amber-600/[0.04] via-orange-600/[0.02] to-transparent animate-[float3_20s_ease-in-out_infinite] blur-3xl" />
-
-        {/* Smaller floating orbs */}
-        <div className="absolute top-[15%] right-[20%] w-[300px] h-[300px] rounded-full bg-gradient-to-bl from-rose-500/[0.05] to-transparent animate-[float4_18s_ease-in-out_infinite] blur-2xl" />
-        <div className="absolute bottom-[20%] left-[30%] w-[350px] h-[350px] rounded-full bg-gradient-to-tr from-cyan-500/[0.04] to-transparent animate-[float5_22s_ease-in-out_infinite] blur-2xl" />
-
-        {/* Subtle dot grid */}
+        {/* AI-generated France background image */}
         <div
-          className="absolute inset-0 opacity-[0.03]"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: 'url(/france-bg.png)' }}
+        />
+
+        {/* French tricolor gradient overlay — Bleu → Blanc → Rouge */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#002395]/30 via-white/[0.03] to-[#ED2939]/25" />
+
+        {/* Floating bleu orb — top left */}
+        <div className="absolute -top-[10%] -left-[5%] w-[700px] h-[700px] rounded-full bg-gradient-to-br from-[#002395]/[0.12] via-[#003399]/[0.06] to-transparent animate-[float1_25s_ease-in-out_infinite] blur-3xl" />
+        {/* Floating rouge orb — bottom right */}
+        <div className="absolute -bottom-[10%] -right-[5%] w-[800px] h-[800px] rounded-full bg-gradient-to-tl from-[#ED2939]/[0.10] via-[#C8102E]/[0.05] to-transparent animate-[float2_30s_ease-in-out_infinite] blur-3xl" />
+        {/* Floating blanc/white orb — center */}
+        <div className="absolute top-[40%] left-[45%] -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-white/[0.04] via-white/[0.02] to-transparent animate-[float3_20s_ease-in-out_infinite] blur-3xl" />
+
+        {/* Smaller bleu accent */}
+        <div className="absolute top-[10%] right-[25%] w-[250px] h-[250px] rounded-full bg-gradient-to-bl from-[#002395]/[0.06] to-transparent animate-[float4_18s_ease-in-out_infinite] blur-2xl" />
+        {/* Smaller rouge accent */}
+        <div className="absolute bottom-[15%] left-[20%] w-[300px] h-[300px] rounded-full bg-gradient-to-tr from-[#ED2939]/[0.05] to-transparent animate-[float5_22s_ease-in-out_infinite] blur-2xl" />
+
+        {/* Fleur-de-lis subtle pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.015]"
           style={{
-            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
-            backgroundSize: '40px 40px',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M30 5c-2 8-8 12-8 18 0 4 3 7 8 12 5-5 8-8 8-12 0-6-6-10-8-18z' fill='white' opacity='0.6'/%3E%3Ccircle cx='30' cy='40' r='3' fill='white' opacity='0.4'/%3E%3C/svg%3E")`,
+            backgroundSize: '60px 60px',
           }}
         />
 
-        {/* Radial vignette */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.4)_70%,rgba(0,0,0,0.7)_100%)]" />
+        {/* Radial vignette to keep depth */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.3)_60%,rgba(0,0,0,0.6)_100%)]" />
       </div>
 
       {/* ===== SIDEBAR ===== */}
       <aside
-        className={`fixed md:relative z-40 flex flex-col w-[260px] h-screen bg-[#111111]/90 backdrop-blur-xl border-r border-white/[0.06] transition-transform duration-300 ${
+        className={`fixed md:relative z-40 flex flex-col w-[260px] h-screen bg-[#0d0d1a]/90 backdrop-blur-xl border-r border-[#002395]/[0.08] transition-transform duration-300 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
         {/* Sidebar Header */}
         <div className="flex items-center gap-3 px-4 py-4">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-white/90 to-white/50 flex items-center justify-center shadow-lg shadow-white/5">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center shadow-lg shadow-[#002395]/20">
             <span className="text-black font-bold text-sm tracking-tight">WS</span>
           </div>
           <span className="text-white font-semibold text-base tracking-tight">WS</span>
@@ -294,7 +306,7 @@ export default function Home() {
         {/* Sidebar Footer */}
         <div className="p-3 border-t border-white/[0.06]">
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-emerald-500/20">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#002395] to-[#ED2939] flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-[#002395]/20">
               Y
             </div>
             <div className="flex-1 min-w-0">
@@ -332,7 +344,7 @@ export default function Home() {
             </svg>
           </button>
           <div className="md:hidden flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-white/90 to-white/50 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#002395] via-white/90 to-[#ED2939] flex items-center justify-center">
               <span className="text-black font-bold text-[10px]">WS</span>
             </div>
           </div>
@@ -365,8 +377,8 @@ export default function Home() {
                 transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                 className="relative mb-6"
               >
-                {/* Animated glow ring */}
-                <div className="absolute inset-0 -m-8 rounded-full bg-gradient-to-br from-violet-500/10 via-fuchsia-500/5 to-emerald-500/10 blur-2xl animate-pulse" />
+                {/* Animated glow ring — French tricolor */}
+                <div className="absolute inset-0 -m-8 rounded-full bg-gradient-to-br from-[#002395]/15 via-white/5 to-[#ED2939]/15 blur-2xl animate-pulse" />
                 <h1 className="relative text-8xl md:text-[10rem] font-bold tracking-tighter bg-gradient-to-b from-white via-white/90 to-white/50 bg-clip-text text-transparent">
                   WS
                 </h1>
@@ -390,7 +402,7 @@ export default function Home() {
                 transition={{ delay: 0.3, duration: 0.6 }}
                 className="w-full max-w-2xl"
               >
-                <div className="relative flex items-center bg-white/[0.04] rounded-2xl px-5 py-4 border border-white/[0.06] hover:border-white/[0.12] focus-within:border-violet-500/30 focus-within:bg-white/[0.06] transition-all shadow-2xl shadow-black/20">
+                <div className="relative flex items-center bg-white/[0.04] rounded-2xl px-5 py-4 border border-white/[0.06] hover:border-[#002395]/30 focus-within:border-[#002395]/40 focus-within:bg-white/[0.06] transition-all shadow-2xl shadow-black/20">
                   <Sparkles size={18} className="text-white/20 mr-3 flex-shrink-0" />
                   <input
                     type="text"
@@ -412,7 +424,7 @@ export default function Home() {
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         onClick={handleMainInput}
-                        className="w-8 h-8 rounded-xl bg-violet-500/80 hover:bg-violet-500 flex items-center justify-center transition-all"
+                        className="w-8 h-8 rounded-xl bg-[#002395]/80 hover:bg-[#002395] flex items-center justify-center transition-all"
                       >
                         <ArrowRight size={16} className="text-white" />
                       </motion.button>
