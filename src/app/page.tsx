@@ -212,9 +212,9 @@ export default function Home() {
     <div className="min-h-screen flex bg-[#050510] text-white font-[var(--font-geist-sans)] overflow-hidden">
       {/* ===== FRANCE-THEMED BACKGROUND ===== */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        {/* AI-generated Paris background image — high visibility */}
+        {/* AI-generated Paris background — cinematic Ken Burns slow zoom */}
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-70"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-75 animate-[kenburns_60s_ease-in-out_infinite_alternate]"
           style={{ backgroundImage: 'url(/france-bg.png)' }}
         />
 
